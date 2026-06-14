@@ -22,7 +22,9 @@
     <div class="col-md-3 mb-4">
         <div class="card" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
             {% if m.m_type == 'image' %}
-                <div style="height: 150px; background: url('https://images.unsplash.com/photo-1506744626753-dba37c19e9fc?q=80&w=400') center/cover;"></div>
+                <div style="height: 150px; background: url('/uploads/{{ m.content }}') center/cover;"></div>
+            {% elif m.m_type == 'video' %}
+                <div style="height: 150px; background: #1e293b; display: flex; align-items: center; justify-content: center; color: white;"><i class="fa fa-play-circle fa-3x"></i></div>
             {% elif m.m_type == 'widget_html' %}
                 <div style="height: 150px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; color: #10b981;"><i class="fa fa-laptop-code fa-3x"></i></div>
             {% else %}
@@ -40,19 +42,17 @@
     {% endfor %}
 </div>
 
-<!-- Modal Upload -->
+<!-- Modal Upload REEL -->
 <div class="modal fade" id="uploadModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Uploader un fichier</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header"><h5 class="modal-title">Uploader un Fichier Local</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <form action="/add_widget" method="POST">
-                    <input type="hidden" name="type" value="image">
-                    <input type="hidden" name="html_code" value="N/A">
-                    <label>Titre de l'image (Simulation upload)</label>
+                <form action="/upload_media" method="POST" enctype="multipart/form-data">
+                    <label>Titre du Média</label>
                     <input type="text" class="form-control mb-3" name="title" required>
-                    <input type="file" class="form-control mb-3">
-                    <button type="submit" class="btn btn-primary w-100">Envoyer</button>
+                    <input type="file" class="form-control mb-3" name="file" accept="image/*,video/*" required>
+                    <button type="submit" class="btn btn-primary w-100">Envoyer au serveur</button>
                 </form>
             </div>
         </div>
