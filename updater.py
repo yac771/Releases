@@ -1,7 +1,6 @@
 import os, sys, requests, subprocess, tempfile
 import logging
 
-# ==== URL OFFICIELLE GITHUB MISE À JOUR ====
 GITHUB_REPO_API_URL = "https://api.github.com/repos/yac771/Releases/releases/latest"
 
 def get_local_version():
@@ -21,7 +20,7 @@ def check_for_updates():
     logging.info(f"Version locale : {local_version}")
     
     try:
-        resp = requests.get(GITHUB_REPO_API_URL, timeout=3)
+        resp = requests.get(GITHUB_REPO_API_URL, timeout=5)
         if resp.status_code == 200:
             data = resp.json()
             remote_version = data.get('tag_name', '').replace('v', '')
@@ -47,5 +46,8 @@ def check_for_updates():
                 subprocess.Popen([exe_path, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'])
                 
                 sys.exit(0)
+                return True
     except Exception as e:
-        logging.warning(f"La verification des mises a jour a echoue (ce n'est pas grave) : {e}")
+        logging.warning(f"La verification des mises a jour a echoue : {e}")
+        
+    return False
