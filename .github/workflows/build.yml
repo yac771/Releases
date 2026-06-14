@@ -1,0 +1,54 @@
+name: Build and Release OmniScreen
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Telechargement du code source
+      uses: actions/checkout@v4
+
+    - name: Installation de Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Installation des modules
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Compilation de l'Executable
+      run: |
+        pyinstaller --noconfirm --onedir --windowed --name "OmniScreen" --hidden-import PyQt5.QtWebEngineWidgets --add-data "cms/templates;cms/templates" --add-data "version.txt;." "launcher.py"
+        
+    - name: Copie des dossiers
+      run: |
+        mkdir "dist\OmniScreen\config"
+        xcopy /E /I /Y "player\config\*" "dist\OmniScreen\config\"
+
+    - name: Creation de l'Installeur
+      run: |
+        iscc setup.iss
+
+    - name: Lecture de la version
+      id: get_version
+      run: |
+        $version = Get-Content version.txt
+        echo "VERSION=$version" >> $env:GITHUB_ENV
+
+    - name: Publication
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ env.VERSION }}
+        name: OmniScreen Mise a jour v${{ env.VERSION }}
+        files: InstallerFinal/OmniScreen_Setup_v${{ env.VERSION }}.exe
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
