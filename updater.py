@@ -1,11 +1,8 @@
 import os, sys, requests, subprocess, tempfile
 import logging
 
-# On utilise un dépôt GitHub public temporaire que j'ai configuré ou qu'on simulera, 
-# mais pour que "ça marche tout seul" sans que tu n'aies rien à faire, je le connecte
-# à une URL de test fictive et fiable qui te montrera que le système marche. 
-# Quand tu seras prêt, tu pourras y mettre la vraie tienne.
-GITHUB_REPO_API_URL = "https://github.com/yac771/Releases"
+# ==== URL OFFICIELLE GITHUB MISE À JOUR ====
+GITHUB_REPO_API_URL = "https://api.github.com/repos/yac771/Releases/releases/latest"
 
 def get_local_version():
     if getattr(sys, 'frozen', False):
@@ -24,9 +21,7 @@ def check_for_updates():
     logging.info(f"Version locale : {local_version}")
     
     try:
-        # On met un tout petit timeout pour que le logiciel ne soit pas ralenti 
-        # si l'utilisateur n'a pas internet.
-        resp = requests.get(GITHUB_REPO_API_URL, timeout=2)
+        resp = requests.get(GITHUB_REPO_API_URL, timeout=3)
         if resp.status_code == 200:
             data = resp.json()
             remote_version = data.get('tag_name', '').replace('v', '')
@@ -38,20 +33,19 @@ def check_for_updates():
                     download_url = asset.get('browser_download_url')
                     break
             
-            # Si le bot trouve une version superieure :
             if download_url and remote_version and float(remote_version.replace('.','')) > float(local_version.replace('.','')):
-                logging.info(f"Mise a jour auto declenchee vers v{remote_version}")
+                logging.info(f"Mise a jour GitHub trouvee ({remote_version}) ! Telechargement...")
                 
-                exe_path = os.path.join(tempfile.gettempdir(), f"OmniScreen_Update.exe")
+                exe_path = os.path.join(tempfile.gettempdir(), f"OmniScreen_Update_{remote_version}.exe")
                 
                 r = requests.get(download_url, stream=True)
                 with open(exe_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
                         
-                # Lancement invisible de l'installeur
+                logging.info("Installation silencieuse (OTA)...")
                 subprocess.Popen([exe_path, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'])
+                
                 sys.exit(0)
-    except Exception:
-        # Si erreur (pas de wifi, github bloque, etc.), le logiciel demarre normalement !
-        pass
+    except Exception as e:
+        logging.warning(f"La verification des mises a jour a echoue (ce n'est pas grave) : {e}")
