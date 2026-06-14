@@ -1,6 +1,5 @@
 [Setup]
 AppName=OmniScreen
-; On va lire la version directement depuis le script GitHub
 AppVersion={#SetupSetting("AppVersion")}
 AppPublisher=OmniScreen Technologies
 AppCopyright=Copyright (C) 2026 OmniScreen
@@ -10,7 +9,6 @@ DefaultDirName={autopf}\OmniScreen
 DefaultGroupName=OmniScreen
 
 OutputDir=.\InstallerFinal
-; Nom du fichier modifie pour s'adapter automatiquement a GitHub
 OutputBaseFilename=OmniScreen_Setup_v1.1.0
 Compression=lzma2
 SolidCompression=yes
