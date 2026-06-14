@@ -1,0 +1,93 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Médias{% endblock %}
+{% block header_title %}Bibliothèque de Médias & Widgets{% endblock %}
+{% block header_subtitle %}Gérez vos images, vidéos, et codes dynamiques.{% endblock %}
+
+{% block content %}
+<div class="card-box d-flex justify-content-between align-items-center">
+    <div>
+        <h5 style="margin:0; font-weight: 700;">Stockage utilisé : {{ medias|length }} Fichiers</h5>
+        <div class="progress mt-2" style="height: 10px; width: 300px;">
+            <div class="progress-bar bg-primary" style="width: 15%"></div>
+        </div>
+    </div>
+    <div>
+        <button class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#uploadModal"><i class="fa fa-upload me-2"></i>Uploader</button>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addWidgetModal"><i class="fa fa-code me-2"></i>Nouveau Widget</button>
+    </div>
+</div>
+
+<div class="row mt-4">
+    {% for m in medias %}
+    <div class="col-md-3 mb-4">
+        <div class="card" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+            {% if m.m_type == 'image' %}
+                <div style="height: 150px; background: url('https://images.unsplash.com/photo-1506744626753-dba37c19e9fc?q=80&w=400') center/cover;"></div>
+            {% elif m.m_type == 'widget_html' %}
+                <div style="height: 150px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; color: #10b981;"><i class="fa fa-laptop-code fa-3x"></i></div>
+            {% else %}
+                <div style="height: 150px; background: #fffbeb; display: flex; align-items: center; justify-content: center; color: #f59e0b;"><i class="fa fa-clock fa-3x"></i></div>
+            {% endif %}
+            
+            <div class="card-body" style="padding: 15px;">
+                <h6 style="font-weight: 600; font-size: 14px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">{{ m.title }}</h6>
+                <a href="/delete_media/{{ m.id }}" class="btn btn-sm btn-outline-danger w-100 mt-2" onclick="return confirm('Sur de supprimer ce fichier ?')">Supprimer</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <div class="col-12 text-center text-muted py-5">Votre bibliotheque est vide. Ajoutez un widget ou un media !</div>
+    {% endfor %}
+</div>
+
+<!-- Modal Upload -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Uploader un fichier</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form action="/add_widget" method="POST">
+                    <input type="hidden" name="type" value="image">
+                    <input type="hidden" name="html_code" value="N/A">
+                    <label>Titre de l'image (Simulation upload)</label>
+                    <input type="text" class="form-control mb-3" name="title" required>
+                    <input type="file" class="form-control mb-3">
+                    <button type="submit" class="btn btn-primary w-100">Envoyer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Widget -->
+<div class="modal fade" id="addWidgetModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="border-radius: 12px; border: none;">
+            <div class="modal-header" style="background: #f8fafc;">
+                <h5 class="modal-title" style="font-weight: 700;"><i class="fa fa-puzzle-piece text-success me-2"></i>Créer un Widget Dynamique</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding: 25px;">
+                <form action="/add_widget" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600;">Nom du Widget</label>
+                        <input type="text" name="title" class="form-control" required placeholder="Ex: Horloge Paris">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600;">Type de Widget</label>
+                        <select class="form-select" name="type">
+                            <option value="widget_clock">Affichage de l'Heure</option>
+                            <option value="widget_html">Code HTML Personnalisé</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 600;">Code HTML (Si choisi)</label>
+                        <textarea class="form-control" name="html_code" rows="5" placeholder="<h1>Hello World</h1>" style="font-family: monospace;"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 py-2">Enregistrer le Widget</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
