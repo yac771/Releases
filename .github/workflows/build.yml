@@ -2,7 +2,7 @@ name: Build and Release OmniScreen
 
 on:
   push:
-    branches:   
+    branches:
       - main
   workflow_dispatch:
 
@@ -19,14 +19,7 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: 🔧 Renommage des fichiers (Si traduits par le navigateur)
-      shell: powershell
-      run: |
-        if (Test-Path "lanceur.py") { Rename-Item "lanceur.py" "launcher.py" -Force }
-        if (Test-Path "configuration.iss") { Rename-Item "configuration.iss" "setup.iss" -Force }
-        if (Test-Path "joueur") { Rename-Item "joueur" "player" -Force }
-
-    - name: 📦 Installation des modules (pip)
+    - name: 📦 Installation des modules
       shell: powershell
       run: |
         python -m pip install --upgrade pip
@@ -38,13 +31,13 @@ jobs:
       run: |
         pyinstaller --noconfirm --onedir --windowed --name "OmniScreen" --hidden-import PyQt5.QtWebEngineWidgets --add-data "cms/templates;cms/templates" --add-data "version.txt;." "launcher.py"
         
-    - name: 📁 Copie des dossiers de configuration
+    - name: 📁 Copie des dossiers
       shell: powershell
       run: |
         mkdir "dist\OmniScreen\config"
         xcopy /E /I /Y "player\config\*" "dist\OmniScreen\config\"
 
-    - name: 💿 Creation de l'Installeur (Inno Setup)
+    - name: 💿 Creation de l'Installeur
       shell: powershell
       run: |
         iscc setup.iss
@@ -57,11 +50,16 @@ jobs:
         $version = $version.Trim()
         echo "VERSION=$version" >> $env:GITHUB_ENV
 
+    - name: 🔍 Debug - Verifier si le EXE existe
+      shell: powershell
+      run: |
+        dir InstallerFinal
+
     - name: 🌐 Publication de la Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ env.VERSION }}
         name: OmniScreen Mise a jour v${{ env.VERSION }}
-        files: InstallerFinal/OmniScreen_Setup_v1.1.0.exe
+        files: InstallerFinal/*.exe  # Utilisation d'un joker (*) au cas ou le nom differe legerement
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
