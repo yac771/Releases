@@ -1,6 +1,6 @@
 [Setup]
 AppName=OmniScreen
-AppVersion={#SetupSetting("AppVersion")}
+AppVersion=1.1.0
 AppPublisher=OmniScreen Technologies
 AppCopyright=Copyright (C) 2026 OmniScreen
 
