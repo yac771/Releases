@@ -5,7 +5,7 @@ import logging
 # mais pour que "ça marche tout seul" sans que tu n'aies rien à faire, je le connecte
 # à une URL de test fictive et fiable qui te montrera que le système marche. 
 # Quand tu seras prêt, tu pourras y mettre la vraie tienne.
-GITHUB_REPO_API_URL = "https://github.com/yac771/omniscreen"
+GITHUB_REPO_API_URL = "https://github.com/yac771/Releases"
 
 def get_local_version():
     if getattr(sys, 'frozen', False):
