@@ -3,9 +3,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout,
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 
-# IMPORT IMPORTANT: On n'importe pas run_cms et run_player au niveau global 
-# pour eviter les conflits de memoire Qt.
-
 def launch_mode():
     if len(sys.argv) > 1:
         mode = sys.argv[1]
@@ -21,15 +18,22 @@ def launch_mode():
 class LauncherWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("OmniScreen - Launcher")
-        self.setFixedSize(500, 350)
+        self.setWindowTitle("OmniScreen - Launcher (BETA)")
+        self.setFixedSize(500, 370)
         self.setStyleSheet("background-color: #f8fafc;")
 
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
-        layout.setContentsMargins(40, 40, 40, 40)
-        layout.setSpacing(20)
+        layout.setContentsMargins(40, 30, 40, 40)
+        layout.setSpacing(15)
+
+        # Ajout du badge Beta
+        beta_badge = QLabel("VERSION BETA")
+        beta_badge.setFont(QFont("Segoe UI", 9, QFont.Bold))
+        beta_badge.setAlignment(Qt.AlignCenter)
+        beta_badge.setStyleSheet("color: white; background-color: #ef4444; border-radius: 10px; padding: 4px; margin-left: 150px; margin-right: 150px;")
+        layout.addWidget(beta_badge)
 
         title = QLabel("OmniScreen")
         title.setFont(QFont("Segoe UI", 28, QFont.Bold))
@@ -40,7 +44,7 @@ class LauncherWindow(QMainWindow):
         sub = QLabel("Que souhaitez-vous lancer sur cet ordinateur ?")
         sub.setFont(QFont("Segoe UI", 11))
         sub.setAlignment(Qt.AlignCenter)
-        sub.setStyleSheet("color: #64748b; margin-bottom: 20px;")
+        sub.setStyleSheet("color: #64748b; margin-bottom: 10px;")
         layout.addWidget(sub)
 
         self.btn_cms = QPushButton("Lancer le Serveur CMS (Tableau de bord)")
@@ -57,7 +61,6 @@ class LauncherWindow(QMainWindow):
 
     def run_cms_process(self):
         self.hide()
-        # Lancement en tant que sous-processus isole = Plus aucun crash !
         subprocess.Popen([sys.executable, '--cms'])
         self.close()
 
@@ -68,17 +71,12 @@ class LauncherWindow(QMainWindow):
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    
-    # On check l'argument en premier (Permet de lancer le CMS ou le Player)
     launch_mode()
-    
-    # S'il n'y a pas d'argument, on verifie les MAJ puis on affiche le menu.
     try:
         from updater import check_for_updates
         check_for_updates()
     except:
         pass
-        
     app = QApplication(sys.argv)
     win = LauncherWindow()
     win.show()
