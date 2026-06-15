@@ -1,4 +1,4 @@
-import os, sys, threading, webbrowser, logging, traceback, socket
+import os, sys, threading, webbrowser, logging, traceback, socket, glob
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -6,7 +6,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import HTTPException
 
-# Fonction pour obtenir l'adresse IP locale de la machine sur le reseau WiFi (ex: 192.168.1.50)
 def get_local_ip():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -16,6 +15,15 @@ def get_local_ip():
         return ip
     except:
         return "127.0.0.1"
+
+def get_dir_size(path):
+    total = 0
+    if os.path.exists(path):
+        for dirpath, dirnames, filenames in os.walk(path):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                if not os.path.islink(fp): total += os.path.getsize(fp)
+    return total
 
 def run_cms():
     logging.basicConfig(level=logging.INFO)
@@ -67,13 +75,12 @@ def run_cms():
         title = db.Column(db.String(150))
         m_type = db.Column(db.String(50))
         content = db.Column(db.Text)
+        is_active = db.Column(db.Boolean, default=False) # Case a cocher Planification
 
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # --- INJECTION DE L'IP LOCALE DANS TOUTES LES PAGES HTML ---
-    # Permettra d'afficher sur le Dashboard l'URL a taper sur le telephone !
     @app.context_processor
     def inject_local_ip():
         return dict(local_ip=get_local_ip())
@@ -105,7 +112,12 @@ def run_cms():
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        return render_template('dashboard.html', user=current_user, active_page='dashboard')
+        # Statistiques Reelles
+        s_count = Display.query.count()
+        m_count = MediaItem.query.count()
+        a_count = MediaItem.query.filter_by(is_active=True).count()
+        bw = f"{(get_dir_size(app.config['UPLOAD_FOLDER']) / (1024*1024)):.1f} MB"
+        return render_template('dashboard.html', user=current_user, active_page='dashboard', screens_count=s_count, media_count=m_count, active_media=a_count, bandwidth=bw)
 
     @app.route('/displays')
     @login_required
@@ -144,7 +156,7 @@ def run_cms():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             m_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')) else 'image'
-            db.session.add(MediaItem(title=title, m_type=m_type, content=filename))
+            db.session.add(MediaItem(title=title, m_type=m_type, content=filename, is_active=False))
             db.session.commit()
         return redirect(url_for('media'))
 
@@ -154,9 +166,30 @@ def run_cms():
         db.session.add(MediaItem(
             title=request.form.get('title'),
             m_type=request.form.get('type'),
-            content=request.form.get('html_code')
+            content=request.form.get('html_code'),
+            is_active=False
         ))
         db.session.commit()
+        return redirect(url_for('media'))
+
+    @app.route('/add_youtube', methods=['POST'])
+    @login_required
+    def add_youtube():
+        url = request.form.get('youtube_url')
+        title = request.form.get('title')
+        try:
+            import yt_dlp
+            ydl_opts = {'outtmpl': os.path.join(app.config['UPLOAD_FOLDER'], f'{title}.%(ext)s'), 'format': 'best'}
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+                # Trouver le fichier telecharge reel
+                files = glob.glob(os.path.join(app.config['UPLOAD_FOLDER'], f"{title}.*"))
+                if files:
+                    saved_name = os.path.basename(files[0])
+                    db.session.add(MediaItem(title=title, m_type='video', content=saved_name, is_active=False))
+                    db.session.commit()
+        except Exception as e:
+            logging.error(f"YT-DLP Error: {e}")
         return redirect(url_for('media'))
 
     @app.route('/delete_media/<int:id>')
@@ -168,6 +201,15 @@ def run_cms():
             db.session.commit()
         return redirect(url_for('media'))
 
+    @app.route('/toggle_media/<int:id>')
+    @login_required
+    def toggle_media(id):
+        m = MediaItem.query.get(id)
+        if m:
+            m.is_active = not m.is_active
+            db.session.commit()
+        return redirect(url_for('schedule'))
+
     @app.route('/uploads/<name>')
     def download_file(name):
         return send_from_directory(app.config["UPLOAD_FOLDER"], name)
@@ -175,7 +217,7 @@ def run_cms():
     @app.route('/schedule')
     @login_required
     def schedule():
-        return render_template('schedule.html', user=current_user, active_page='schedule')
+        return render_template('schedule.html', user=current_user, active_page='schedule', medias=MediaItem.query.all())
 
     @app.route('/settings')
     @login_required
@@ -189,12 +231,13 @@ def run_cms():
 
     @app.route('/api/playlist')
     def api_playlist():
-        items = MediaItem.query.all()
+        items = MediaItem.query.filter_by(is_active=True).all()
         playlist = []
         for i in items:
             if i.m_type in ['image', 'video']:
-                # IMPORTANT: On renvoie l'URL avec l'IP Locale pour que les players sur d'autres PC puissent telecharger l'image !
                 playlist.append({"type": i.m_type, "url": f"http://{get_local_ip()}:5000/uploads/" + i.content, "duration": 15})
+            else:
+                playlist.append({"type": i.m_type, "url": i.content, "duration": 15})
         if not playlist:
             playlist.append({"type": "web", "url": "data:text/html;charset=utf-8,<html><body style='background:%230f172a;color:white;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;'><div style='text-align:center;'><h1 style='font-size:3rem;margin-bottom:10px;'>OmniScreen</h1><p style='color:%2364748b;font-size:1.5rem;'>En attente de contenu...</p></div></body></html>", "duration": 10})
         return jsonify({"campaigns": [{"items": playlist}]})
@@ -211,16 +254,12 @@ def run_cms():
             Display.query.first()
             MediaItem.query.first()
         except Exception:
-            logging.warning("Migration BDD requise. Reinitialisation securisee...")
+            logging.warning("Migration BDD (Nouvelle Version)")
             db.drop_all()
             db.create_all()
 
-    # Ouvre le navigateur localement
     def open_browser(): webbrowser.open_new('http://127.0.0.1:5000/')
     threading.Timer(1.5, open_browser).start()
-    
-    # LA MAGIE RESEAU LOCAL EST ICI (host='0.0.0.0') :
-    # Ca veut dire que le CMS ecoute toutes les connexions entrantes sur le reseau WiFi !
     app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 [Setup]
 AppName=OmniScreen
-AppVersion=1.7.2
+AppVersion=1.8.0
 AppPublisher=OmniScreen Technologies
 AppCopyright=Copyright (C) 2026 OmniScreen
 
@@ -9,7 +9,7 @@ DefaultDirName={autopf}\OmniScreen
 DefaultGroupName=OmniScreen
 
 OutputDir=.\InstallerFinal
-OutputBaseFilename=OmniScreen_Setup_v1.7.2
+OutputBaseFilename=OmniScreen_Setup_v1.8.0
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
