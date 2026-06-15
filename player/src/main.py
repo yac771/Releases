@@ -4,8 +4,8 @@ from player.src.player import SignagePlayer
 from PyQt5.QtCore import Qt
 
 def main():
-    APPDATA = os.environ.get('APPDATA', os.path.expanduser('~'))
-    OMNI_DIR = os.path.join(APPDATA, 'OmniScreenData')
+    LOCAL_APPDATA = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
+    OMNI_DIR = os.path.join(LOCAL_APPDATA, 'OmniScreenData')
     os.makedirs(OMNI_DIR, exist_ok=True)
     os.makedirs(os.path.join(OMNI_DIR, 'logs'), exist_ok=True)
     os.makedirs(os.path.join(OMNI_DIR, 'config'), exist_ok=True)
@@ -19,7 +19,6 @@ def main():
         ]
     )
     
-    # La config est désormais gérée dans APPDATA (modifiable en lecture/ecriture)
     config_path = os.path.join(OMNI_DIR, 'config', 'schedule.json')
     
     app = QApplication(sys.argv)

@@ -1,4 +1,4 @@
-import os, sys, requests, subprocess, tempfile
+import os, sys, requests, tempfile
 import logging
 
 GITHUB_REPO_API_URL = "https://api.github.com/repos/yac771/Releases/releases/latest"
@@ -33,30 +33,11 @@ def check_for_updates():
                     break
             
             if download_url and remote_version and float(remote_version.replace('.','')) > float(local_version.replace('.','')):
-                logging.info(f"Mise a jour GitHub trouvee ({remote_version}) ! Demarrage Updater Graphique...")
+                # CORRECTION: On retourne DIRECTEMENT l'instance de la fenetre Updater
+                # au lieu d'essayer de lancer un subprocess qui cassait tout.
+                from omni_updater import UpdaterWindow
+                return UpdaterWindow(download_url, remote_version)
                 
-                # ==== LE VRAI SYSTEME PROFESSIONNEL ====
-                # On ne telecharge PAS le fichier de 60Mo ici en figeant le logiciel.
-                # On lance un deuxieme programme cache appele "omni_updater.py" qui va
-                # afficher une belle fenetre PyQt5 avec une vraie barre de pourcentage
-                # puis fermer le logiciel principal, puis lancer le Setup.
-                
-                if getattr(sys, 'frozen', False):
-                    base_dir = sys._MEIPASS
-                else:
-                    base_dir = os.path.abspath(os.path.dirname(__file__))
-                    
-                updater_script = os.path.join(base_dir, 'omni_updater.py')
-                
-                # On lance le script de maj dans un processus totallement detache
-                DETACHED_PROCESS = 0x00000008
-                
-                # On lui passe l'URL et la version en argument
-                subprocess.Popen([sys.executable, updater_script, download_url, remote_version], creationflags=DETACHED_PROCESS)
-                
-                # On ferme immediatement le Lanceur pour eviter de bloquer l'installation
-                sys.exit(0)
-                return True
     except Exception as e:
         logging.warning(f"La verification des mises a jour a echoue : {e}")
         

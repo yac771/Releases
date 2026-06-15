@@ -28,7 +28,6 @@ class LauncherWindow(QMainWindow):
         layout.setContentsMargins(40, 20, 40, 30)
         layout.setSpacing(15)
 
-        # ====== CORRECTION DU BUG D'INTERFACE (QPoint) ======
         logo_label = QLabel()
         logo_label.setAlignment(Qt.AlignCenter)
         
@@ -37,24 +36,19 @@ class LauncherWindow(QMainWindow):
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing)
         
-        # Cercle exterieur bleu fonce
         painter.setBrush(QColor("#0f172a"))
         painter.setPen(Qt.NoPen)
         painter.drawEllipse(5, 5, 90, 90)
         
-        # Cercle interieur bleu electrique
         painter.setBrush(QColor("#3b82f6"))
         painter.drawEllipse(20, 20, 60, 60)
         
-        # Centre ecran "Play" blanc
         painter.setBrush(QColor("#ffffff"))
-        # Correction : On utilise QPoint importé directement depuis PyQt5.QtCore
         painter.drawPolygon(QPoint(40, 35), QPoint(65, 50), QPoint(40, 65))
         painter.end()
         
         logo_label.setPixmap(pixmap)
         layout.addWidget(logo_label)
-        # ====================================================
 
         title = QLabel("OmniScreen")
         title.setFont(QFont("Segoe UI", 26, QFont.Bold))
@@ -93,13 +87,16 @@ class LauncherWindow(QMainWindow):
         layout.addWidget(self.lbl_update_status)
 
     def run_cms_process(self):
-        self.hide()
+        # Ne cache plus la fenetre pour eviter la perte du thread pyqt
         subprocess.Popen([sys.executable, '--cms'])
         self.close()
 
     def run_player_process(self):
+        # REPARATION: Le processus player etait bloque car Pyinstaller a du mal a lancer PyQtMultimedia depuis un subprocess
+        # Solution: On execute le code directement ici plutot qu'en subprocess !
         self.hide()
-        subprocess.Popen([sys.executable, '--player'])
+        from player.src.main import main as run_player
+        run_player()
         self.close()
 
     def manual_update_check(self):
@@ -116,14 +113,15 @@ class LauncherWindow(QMainWindow):
         
     def update_check_finished(self, result):
         if result:
-            self.lbl_update_status.setText("✅ Mise à jour trouvée ! Installation...")
-            self.lbl_update_status.setStyleSheet("color: #10b981; font-size: 11px; font-weight: bold;")
+            self.updater_window = result
+            self.updater_window.show()
+            self.hide()
         else:
             self.btn_update.setText("🔄 Rechercher des Mises à jour")
             self.btn_update.setEnabled(True)
             self.lbl_update_status.setText("Vous avez la dernière version.")
             self.lbl_update_status.setStyleSheet("color: #64748b; font-size: 11px; font-weight: bold;")
-        self.lbl_update_status.show()
+            self.lbl_update_status.show()
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
