@@ -87,16 +87,20 @@ class LauncherWindow(QMainWindow):
         layout.addWidget(self.lbl_update_status)
 
     def run_cms_process(self):
-        # Ne cache plus la fenetre pour eviter la perte du thread pyqt
+        self.hide()
         subprocess.Popen([sys.executable, '--cms'])
         self.close()
 
     def run_player_process(self):
-        # REPARATION: Le processus player etait bloque car Pyinstaller a du mal a lancer PyQtMultimedia depuis un subprocess
-        # Solution: On execute le code directement ici plutot qu'en subprocess !
         self.hide()
-        from player.src.main import main as run_player
-        run_player()
+        # LE VRAI FIX POUR LE PLAYER EN .EXE WINDOWS :
+        # Le Player a besoin de son propre environnement "propre" car il utilise QWebEngine et QMediaPlayer
+        # qui s'entre-tuent s'ils sont lances d'une mauvaise maniere dans PyQt5.
+        # On lance avec subprocess, MAIS on rajoute des arguments systemes vitaux.
+        
+        # Sous Windows, on detache le processus pour qu'il soit le patron de sa propre fenetre
+        DETACHED_PROCESS = 0x00000008
+        subprocess.Popen([sys.executable, '--player'], creationflags=DETACHED_PROCESS)
         self.close()
 
     def manual_update_check(self):

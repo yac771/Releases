@@ -1,6 +1,5 @@
 import sys, os, logging
 from PyQt5.QtWidgets import QApplication
-from player.src.player import SignagePlayer
 from PyQt5.QtCore import Qt
 
 def main():
@@ -20,6 +19,12 @@ def main():
     )
     
     config_path = os.path.join(OMNI_DIR, 'config', 'schedule.json')
+    
+    # Import retarde pour eviter les fuites de memoire entre Launcher et Player
+    from player.src.player import SignagePlayer
+    
+    # Il FAUT forcer ces arguments sous Windows pour que le navigateur web du player marche en plein ecran
+    sys.argv.extend(["--disable-gpu-compositing", "--disable-software-rasterizer"])
     
     app = QApplication(sys.argv)
     if hasattr(Qt, 'BlankCursor'):
