@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OmniScreen - Premium</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .payment-card { background: white; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; width: 100%; max-width: 900px; display: flex; }
+        .left-panel { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: white; padding: 40px; width: 40%; display: flex; flex-direction: column; justify-content: center; }
+        .right-panel { padding: 40px; width: 60%; }
+        .feature-list { list-style: none; padding: 0; margin-top: 20px; font-size: 14px; opacity: 0.9; }
+        .feature-list li { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .price { font-size: 48px; font-weight: 800; margin: 20px 0 0 0; }
+        .price span { font-size: 16px; font-weight: 500; opacity: 0.7; }
+        .paypal-btn { background: #ffc439; color: #003087; font-weight: bold; border-radius: 50px; padding: 15px; border: none; font-size: 18px; width: 100%; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; text-decoration: none;}
+        .paypal-btn:hover { background: #f2b620; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+    <div class="payment-card">
+        <div class="left-panel">
+            <h2 style="font-weight: 800; margin-bottom: 5px;"><i class="fa fa-crown text-warning"></i> OmniScreen<br>PREMIUM</h2>
+            <p style="opacity: 0.8; font-size: 14px;">La puissance absolue pour votre affichage dynamique.</p>
+            
+            <ul class="feature-list">
+                <li><i class="fa fa-check-circle text-success"></i> Écrans illimités</li>
+                <li><i class="fa fa-check-circle text-success"></i> Suppression totale des publicités</li>
+                <li><i class="fa fa-check-circle text-success"></i> Widgets Météo & RSS avancés</li>
+                <li><i class="fa fa-check-circle text-success"></i> Assistance prioritaire 24/7</li>
+            </ul>
+        </div>
+        
+        <div class="right-panel">
+            <a href="/dashboard" style="color: #64748b; text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 20px;"><i class="fa fa-arrow-left"></i> Retour</a>
+            
+            <h3 style="font-weight: 700; color: #0f172a; margin-bottom: 5px;">Passer à la vitesse supérieure</h3>
+            <p style="color: #64748b; font-size: 14px;">Abonnement sans engagement. Annulable à tout moment.</p>
+            
+            <div class="price">9.99€ <span>/ mois</span></div>
+            
+            <hr style="margin: 30px 0; border-color: #e2e8f0;">
+            
+            <!-- Lien PayPal Reel vers un lien de paiement genérique (a remplacer par le tien) -->
+            <a href="https://www.paypal.com/cgi-bin/webscr?cmd=_xclick-subscriptions&business=TON_ADRESSE_EMAIL_PAYPAL@gmail.com&lc=FR&item_name=OmniScreen+Premium&item_number=PREMIUM_SUB&no_note=1&no_shipping=1&src=1&a3=9.99&p3=1&t3=M&currency_code=EUR" target="_blank" class="paypal-btn">
+                Payer avec <i class="fab fa-paypal" style="font-size: 24px;"></i> PayPal
+            </a>
+            
+            <p style="text-align: center; color: #94a3b8; font-size: 11px; margin-top: 15px;">Transactions sécurisées et cryptées par PayPal Inc.</p>
+        </div>
+    </div>
+
+</body>
+</html>
