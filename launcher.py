@@ -87,21 +87,14 @@ class LauncherWindow(QMainWindow):
         layout.addWidget(self.lbl_update_status)
 
     def run_cms_process(self):
-        self.hide()
         subprocess.Popen([sys.executable, '--cms'])
-        self.close()
+        QApplication.quit()
 
     def run_player_process(self):
-        self.hide()
-        # LE VRAI FIX POUR LE PLAYER EN .EXE WINDOWS :
-        # Le Player a besoin de son propre environnement "propre" car il utilise QWebEngine et QMediaPlayer
-        # qui s'entre-tuent s'ils sont lances d'une mauvaise maniere dans PyQt5.
-        # On lance avec subprocess, MAIS on rajoute des arguments systemes vitaux.
-        
-        # Sous Windows, on detache le processus pour qu'il soit le patron de sa propre fenetre
+        # DETACHED_PROCESS permet de liberer le Launcher.
         DETACHED_PROCESS = 0x00000008
         subprocess.Popen([sys.executable, '--player'], creationflags=DETACHED_PROCESS)
-        self.close()
+        QApplication.quit()
 
     def manual_update_check(self):
         self.btn_update.setEnabled(False)
@@ -111,13 +104,17 @@ class LauncherWindow(QMainWindow):
         def check():
             from updater import check_for_updates
             result = check_for_updates()
+            # On renvoie l'information de maniere securisee au flux principal
             QTimer.singleShot(0, lambda: self.update_check_finished(result))
             
         threading.Thread(target=check).start()
         
     def update_check_finished(self, result):
         if result:
-            self.updater_window = result
+            url, version = result
+            # On cree la fenetre de mise a jour ICI dans le flux principal, Windows est content !
+            from omni_updater import UpdaterWindow
+            self.updater_window = UpdaterWindow(url, version)
             self.updater_window.show()
             self.hide()
         else:

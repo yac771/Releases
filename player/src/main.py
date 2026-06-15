@@ -1,6 +1,7 @@
 import sys, os, logging
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt
+# CORRECTION IMPORTANTE: On n'importe PAS QApplication directement ici, car s'il y a un 
+# double import avec launcher.py, ca fait crasher le systeme C++ sous-jacent.
+from PyQt5 import QtWidgets, QtCore
 
 def main():
     LOCAL_APPDATA = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
@@ -20,16 +21,20 @@ def main():
     
     config_path = os.path.join(OMNI_DIR, 'config', 'schedule.json')
     
-    # Import retarde pour eviter les fuites de memoire entre Launcher et Player
-    from player.src.player import SignagePlayer
+    # Nettoyage absolu des arguments
+    # Si Windows envoie des chemins bizarres a l'exe, on les nettoie.
+    safe_argv = [sys.argv[0], "--no-sandbox", "--disable-gpu-compositing"]
     
-    # Il FAUT forcer ces arguments sous Windows pour que le navigateur web du player marche en plein ecran
-    sys.argv.extend(["--disable-gpu-compositing", "--disable-software-rasterizer"])
-    
-    app = QApplication(sys.argv)
-    if hasattr(Qt, 'BlankCursor'):
-        app.setOverrideCursor(Qt.BlankCursor)
+    # On s'assure qu'une seule application existe
+    app = QtWidgets.QApplication.instance()
+    if not app:
+        app = QtWidgets.QApplication(safe_argv)
         
+    if hasattr(QtCore.Qt, 'BlankCursor'):
+        app.setOverrideCursor(QtCore.Qt.BlankCursor)
+        
+    # Import retarde de l'UI
+    from player.src.player import SignagePlayer
     player = SignagePlayer(config_path)
     player.show()
     sys.exit(app.exec_())

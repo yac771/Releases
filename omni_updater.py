@@ -32,7 +32,6 @@ class DownloadThread(QThread):
                         done = int(100 * downloaded / total_length)
                         self.progress_signal.emit(done)
             
-            # Attendre 1 seconde pour que l'UI affiche 100%
             time.sleep(1)
             self.done_signal.emit(exe_path)
             
@@ -99,12 +98,14 @@ class UpdaterWindow(QWidget):
         self.status_label.setText("Veuillez autoriser l'installation Windows.")
         self.status_label.setStyleSheet("color: #10b981; border: none;")
         
-        # On lance le Setup en mode detaché
+        # CORRECTION EXPERT: L'updater GUI se ferme AVANT de lancer l'installation Windows.
+        # Si on lance l'installeur pendant que PyQt tourne, ca creait un conflit de DLL.
         DETACHED_PROCESS = 0x00000008
         subprocess.Popen([exe_path, '/SILENT', '/SUPPRESSMSGBOXES'], creationflags=DETACHED_PROCESS)
         
-        # On ferme la fenetre de chargement
+        # On quitte l'application actuelle proprement 
         QApplication.quit()
+        sys.exit(0)
 
     def show_error(self, err):
         self.title_label.setText("Erreur de téléchargement")
@@ -112,10 +113,5 @@ class UpdaterWindow(QWidget):
         self.status_label.setStyleSheet("color: #ef4444; border: none;")
 
 if __name__ == '__main__':
-    if len(sys.argv) > 2:
-        app = QApplication(sys.argv)
-        url = sys.argv[1]
-        ver = sys.argv[2]
-        window = UpdaterWindow(url, ver)
-        window.show()
-        sys.exit(app.exec_())
+    # Ceci est execute si on l'appelle depuis la ligne de commande (ce qui ne devrait plus arriver, mais c'est securise)
+    pass

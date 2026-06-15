@@ -28,15 +28,24 @@ def check_for_updates():
             assets = data.get('assets', [])
             download_url = None
             for asset in assets:
-                if asset.get('name', '').endswith('.exe'):
+                # CORRECTION : S'assurer de bien telecharger le bon exe, pas un code source
+                if asset.get('name', '').lower().endswith('.exe'):
                     download_url = asset.get('browser_download_url')
                     break
             
-            if download_url and remote_version and float(remote_version.replace('.','')) > float(local_version.replace('.','')):
-                # CORRECTION: On retourne DIRECTEMENT l'instance de la fenetre Updater
-                # au lieu d'essayer de lancer un subprocess qui cassait tout.
-                from omni_updater import UpdaterWindow
-                return UpdaterWindow(download_url, remote_version)
+            # On parse proprement les versions pour eviter les bugs de type "1.10.0" > "1.9.0" 
+            # (que la fonction float() simple ne comprend pas bien).
+            def parse_version(v_str):
+                # "1.4.0-beta" -> [1, 4, 0]
+                clean = v_str.split('-')[0]
+                return [int(x) for x in clean.split('.') if x.isdigit()]
+                
+            local_parsed = parse_version(local_version)
+            remote_parsed = parse_version(remote_version)
+
+            if download_url and remote_parsed > local_parsed:
+                logging.info(f"Mise a jour GitHub trouvee ({remote_version}) ! On previent l'UI...")
+                return (download_url, remote_version)
                 
     except Exception as e:
         logging.warning(f"La verification des mises a jour a echoue : {e}")
