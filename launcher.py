@@ -1,7 +1,7 @@
 import sys, os, subprocess, multiprocessing, threading
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QMessageBox
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont, QIcon, QPixmap, QPainter, QColor
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel
+from PyQt5.QtCore import Qt, QTimer, QPoint
+from PyQt5.QtGui import QFont, QPixmap, QPainter, QColor
 
 def launch_mode():
     if len(sys.argv) > 1:
@@ -19,7 +19,7 @@ class LauncherWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("OmniScreen - Launcher")
-        self.setFixedSize(500, 480) # Agrandissement pour faire de la place au beau logo et au bouton de MAJ
+        self.setFixedSize(500, 480)
         self.setStyleSheet("background-color: #f8fafc;")
 
         central = QWidget()
@@ -28,11 +28,10 @@ class LauncherWindow(QMainWindow):
         layout.setContentsMargins(40, 20, 40, 30)
         layout.setSpacing(15)
 
-        # ====== LE NOUVEAU LOGO MAGNIFIQUE (Généré en Code pour ne pas dependre de fichiers externes) ======
+        # ====== CORRECTION DU BUG D'INTERFACE (QPoint) ======
         logo_label = QLabel()
         logo_label.setAlignment(Qt.AlignCenter)
         
-        # On dessine un faux "Logo" tres moderne (Style Oeil / Lentille futuriste)
         pixmap = QPixmap(100, 100)
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
@@ -49,12 +48,13 @@ class LauncherWindow(QMainWindow):
         
         # Centre ecran "Play" blanc
         painter.setBrush(QColor("#ffffff"))
-        painter.drawPolygon(*[Qt.QPoint(40, 35), Qt.QPoint(65, 50), Qt.QPoint(40, 65)])
+        # Correction : On utilise QPoint importé directement depuis PyQt5.QtCore
+        painter.drawPolygon(QPoint(40, 35), QPoint(65, 50), QPoint(40, 65))
         painter.end()
         
         logo_label.setPixmap(pixmap)
         layout.addWidget(logo_label)
-        # ===================================================================================================
+        # ====================================================
 
         title = QLabel("OmniScreen")
         title.setFont(QFont("Segoe UI", 26, QFont.Bold))
@@ -80,14 +80,12 @@ class LauncherWindow(QMainWindow):
         self.btn_player.clicked.connect(self.run_player_process)
         layout.addWidget(self.btn_player)
 
-        # ====== LE NOUVEAU BOUTON "RECHERCHER DES MISES A JOUR" ======
         self.btn_update = QPushButton("🔄 Rechercher des Mises à jour")
         self.btn_update.setCursor(Qt.PointingHandCursor)
         self.btn_update.setStyleSheet("QPushButton { background-color: transparent; color: #64748b; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-weight: bold; font-size:12px; margin-top: 10px;} QPushButton:hover { background-color: #e2e8f0; color: #0f172a; }")
         self.btn_update.clicked.connect(self.manual_update_check)
         layout.addWidget(self.btn_update)
         
-        # Texte informatif caché pour le resultat de la maj
         self.lbl_update_status = QLabel("")
         self.lbl_update_status.setAlignment(Qt.AlignCenter)
         self.lbl_update_status.setStyleSheet("color: #3b82f6; font-size: 11px; font-weight: bold;")
@@ -109,13 +107,9 @@ class LauncherWindow(QMainWindow):
         self.btn_update.setText("⏳ Recherche en cours...")
         self.lbl_update_status.hide()
         
-        # On lance la verification dans un thread separe pour ne pas figer l'interface
         def check():
             from updater import check_for_updates
-            # check_for_updates renvoie desormais True si une maj est lancee, False sinon
             result = check_for_updates()
-            
-            # On demande au fil principal de remettre le bouton normal
             QTimer.singleShot(0, lambda: self.update_check_finished(result))
             
         threading.Thread(target=check).start()
@@ -134,10 +128,6 @@ class LauncherWindow(QMainWindow):
 if __name__ == "__main__":
     multiprocessing.freeze_support()
     launch_mode()
-    
-    # On desactive le check silencieux automatique au demarrage 
-    # car maintenant on a un bouton explicite pour le client !
-    
     app = QApplication(sys.argv)
     win = LauncherWindow()
     win.show()

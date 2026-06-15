@@ -27,7 +27,11 @@ echo [1/3] Installation des modules (pip)...
 %PYTHON_CMD% -m pip install -r requirements.txt >nul
 
 echo [2/3] Creation de l'executable (Veuillez patienter 1 a 2 minutes)...
-%PYTHON_CMD% -m PyInstaller --noconfirm --onedir --windowed --name "OmniScreen" --hidden-import PyQt5.QtWebEngineWidgets --add-data "cms/templates;cms/templates" --add-data "version.txt;." "launcher.py"
+:: On telecharge une petite icone .ico gratuite et professionnelle pour remplacer le canard !
+%PYTHON_CMD% -c "import urllib.request; urllib.request.urlretrieve('https://raw.githubusercontent.com/yac771/Releases/main/icon.ico', 'icon.ico')" >nul 2>&1
+
+:: On l'integre a l'exe avec l'option --icon
+%PYTHON_CMD% -m PyInstaller --noconfirm --onedir --windowed --name "OmniScreen" --icon "icon.ico" --hidden-import PyQt5.QtWebEngineWidgets --add-data "cms/templates;cms/templates" --add-data "version.txt;." "launcher.py"
 
 echo [3/3] Copie de la configuration...
 mkdir "dist\OmniScreen\config" 2>nul
