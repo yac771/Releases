@@ -33,18 +33,28 @@ def check_for_updates():
                     break
             
             if download_url and remote_version and float(remote_version.replace('.','')) > float(local_version.replace('.','')):
-                logging.info(f"Mise a jour GitHub trouvee ({remote_version}) ! Telechargement...")
+                logging.info(f"Mise a jour GitHub trouvee ({remote_version}) ! Demarrage Updater Graphique...")
                 
-                exe_path = os.path.join(tempfile.gettempdir(), f"OmniScreen_Update_{remote_version}.exe")
+                # ==== LE VRAI SYSTEME PROFESSIONNEL ====
+                # On ne telecharge PAS le fichier de 60Mo ici en figeant le logiciel.
+                # On lance un deuxieme programme cache appele "omni_updater.py" qui va
+                # afficher une belle fenetre PyQt5 avec une vraie barre de pourcentage
+                # puis fermer le logiciel principal, puis lancer le Setup.
                 
-                r = requests.get(download_url, stream=True)
-                with open(exe_path, 'wb') as f:
-                    for chunk in r.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                        
-                logging.info("Installation silencieuse (OTA)...")
-                subprocess.Popen([exe_path, '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'])
+                if getattr(sys, 'frozen', False):
+                    base_dir = sys._MEIPASS
+                else:
+                    base_dir = os.path.abspath(os.path.dirname(__file__))
+                    
+                updater_script = os.path.join(base_dir, 'omni_updater.py')
                 
+                # On lance le script de maj dans un processus totallement detache
+                DETACHED_PROCESS = 0x00000008
+                
+                # On lui passe l'URL et la version en argument
+                subprocess.Popen([sys.executable, updater_script, download_url, remote_version], creationflags=DETACHED_PROCESS)
+                
+                # On ferme immediatement le Lanceur pour eviter de bloquer l'installation
                 sys.exit(0)
                 return True
     except Exception as e:
