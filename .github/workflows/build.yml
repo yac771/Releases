@@ -80,6 +80,6 @@ jobs:
       with:
         tag_name: v${{ env.VERSION }}
         name: OmniScreen Mise a jour v${{ env.VERSION }}
-        files: InstallerFinal/OmniScreen_Setup_v2.4.0.exe
+        files: InstallerFinal/OmniScreen_Setup_v2.5.0.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
