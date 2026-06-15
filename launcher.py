@@ -82,19 +82,19 @@ class LauncherWindow(QMainWindow):
         
         self.lbl_update_status = QLabel("")
         self.lbl_update_status.setAlignment(Qt.AlignCenter)
-        self.lbl_update_status.setStyleSheet("color: #3b82f6; font-size: 11px; font-weight: bold;")
         self.lbl_update_status.hide()
         layout.addWidget(self.lbl_update_status)
 
     def run_cms_process(self):
+        self.hide()
         subprocess.Popen([sys.executable, '--cms'])
-        QApplication.quit()
+        self.close()
 
     def run_player_process(self):
-        # DETACHED_PROCESS permet de liberer le Launcher.
+        self.hide()
         DETACHED_PROCESS = 0x00000008
         subprocess.Popen([sys.executable, '--player'], creationflags=DETACHED_PROCESS)
-        QApplication.quit()
+        self.close()
 
     def manual_update_check(self):
         self.btn_update.setEnabled(False)
@@ -104,19 +104,23 @@ class LauncherWindow(QMainWindow):
         def check():
             from updater import check_for_updates
             result = check_for_updates()
-            # On renvoie l'information de maniere securisee au flux principal
             QTimer.singleShot(0, lambda: self.update_check_finished(result))
             
         threading.Thread(target=check).start()
         
     def update_check_finished(self, result):
-        if result:
+        if isinstance(result, tuple):
             url, version = result
-            # On cree la fenetre de mise a jour ICI dans le flux principal, Windows est content !
             from omni_updater import UpdaterWindow
             self.updater_window = UpdaterWindow(url, version)
             self.updater_window.show()
             self.hide()
+        elif isinstance(result, str) and result.startswith("ERR:"):
+            self.btn_update.setText("🔄 Rechercher des Mises à jour")
+            self.btn_update.setEnabled(True)
+            self.lbl_update_status.setText(f"Erreur: {result[4:40]}...")
+            self.lbl_update_status.setStyleSheet("color: #ef4444; font-size: 11px; font-weight: bold;")
+            self.lbl_update_status.show()
         else:
             self.btn_update.setText("🔄 Rechercher des Mises à jour")
             self.btn_update.setEnabled(True)

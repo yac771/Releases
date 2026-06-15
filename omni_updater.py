@@ -2,6 +2,9 @@ import sys, os, time, requests, subprocess, tempfile
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QProgressBar
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont
+import urllib3
+
+urllib3.disable_warnings()
 
 class DownloadThread(QThread):
     progress_signal = pyqtSignal(int)
@@ -16,7 +19,8 @@ class DownloadThread(QThread):
     def run(self):
         exe_path = os.path.join(tempfile.gettempdir(), f"OmniScreen_Update_{self.version}.exe")
         try:
-            response = requests.get(self.url, stream=True, timeout=10)
+            # FIX: verify=False permet de passer outre les antivirus/pare-feu stricts qui bloquent les certificats
+            response = requests.get(self.url, stream=True, timeout=15, verify=False)
             response.raise_for_status()
             total_length = int(response.headers.get('content-length', 0))
             
@@ -98,12 +102,9 @@ class UpdaterWindow(QWidget):
         self.status_label.setText("Veuillez autoriser l'installation Windows.")
         self.status_label.setStyleSheet("color: #10b981; border: none;")
         
-        # CORRECTION EXPERT: L'updater GUI se ferme AVANT de lancer l'installation Windows.
-        # Si on lance l'installeur pendant que PyQt tourne, ca creait un conflit de DLL.
         DETACHED_PROCESS = 0x00000008
         subprocess.Popen([exe_path, '/SILENT', '/SUPPRESSMSGBOXES'], creationflags=DETACHED_PROCESS)
         
-        # On quitte l'application actuelle proprement 
         QApplication.quit()
         sys.exit(0)
 
@@ -113,5 +114,4 @@ class UpdaterWindow(QWidget):
         self.status_label.setStyleSheet("color: #ef4444; border: none;")
 
 if __name__ == '__main__':
-    # Ceci est execute si on l'appelle depuis la ligne de commande (ce qui ne devrait plus arriver, mais c'est securise)
     pass

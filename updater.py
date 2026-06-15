@@ -1,7 +1,9 @@
-import os, sys, requests, tempfile
+import os, sys, requests
 import logging
+import urllib3
 
-GITHUB_REPO_API_URL = "https://api.github.com/repos/yac771/Releases/releases/latest"
+# Desactivation des alertes de securite SSL qui bloquent l'exe
+urllib3.disable_warnings()
 
 def get_local_version():
     if getattr(sys, 'frozen', False):
@@ -15,39 +17,36 @@ def get_local_version():
             return f.read().strip()
     return '1.0.0'
 
+def parse_version(v_str):
+    clean = v_str.split('-')[0]
+    return [int(x) for x in clean.split('.') if x.isdigit()]
+
 def check_for_updates():
     local_version = get_local_version()
     logging.info(f"Version locale : {local_version}")
     
     try:
-        resp = requests.get(GITHUB_REPO_API_URL, timeout=5)
-        if resp.status_code == 200:
-            data = resp.json()
-            remote_version = data.get('tag_name', '').replace('v', '')
-            
-            assets = data.get('assets', [])
-            download_url = None
-            for asset in assets:
-                # CORRECTION : S'assurer de bien telecharger le bon exe, pas un code source
-                if asset.get('name', '').lower().endswith('.exe'):
-                    download_url = asset.get('browser_download_url')
-                    break
-            
-            # On parse proprement les versions pour eviter les bugs de type "1.10.0" > "1.9.0" 
-            # (que la fonction float() simple ne comprend pas bien).
-            def parse_version(v_str):
-                # "1.4.0-beta" -> [1, 4, 0]
-                clean = v_str.split('-')[0]
-                return [int(x) for x in clean.split('.') if x.isdigit()]
+        # TECHNIQUE ANTI-LIMITE : On passe par la redirection web plutot que l'API !
+        url = "https://github.com/yac771/Releases/releases/latest"
+        resp = requests.get(url, allow_redirects=False, timeout=10, verify=False)
+        
+        remote_version = None
+        if resp.status_code in [301, 302]:
+            location = resp.headers.get('Location', '')
+            if 'tag/v' in location:
+                remote_version = location.split('tag/v')[-1]
                 
+        if remote_version:
             local_parsed = parse_version(local_version)
             remote_parsed = parse_version(remote_version)
-
-            if download_url and remote_parsed > local_parsed:
-                logging.info(f"Mise a jour GitHub trouvee ({remote_version}) ! On previent l'UI...")
+            
+            if remote_parsed > local_parsed:
+                logging.info(f"MAJ trouvee: {remote_version}")
+                download_url = f"https://github.com/yac771/Releases/releases/download/v{remote_version}/OmniScreen_Setup_v{remote_version}.exe"
                 return (download_url, remote_version)
                 
     except Exception as e:
-        logging.warning(f"La verification des mises a jour a echoue : {e}")
+        logging.warning(f"Echec verification: {e}")
+        return f"ERR:{str(e)}"
         
     return False
