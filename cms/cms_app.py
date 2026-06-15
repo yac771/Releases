@@ -19,7 +19,7 @@ def get_local_ip():
 def get_dir_size(path):
     total = 0
     if os.path.exists(path):
-        for dirpath, dirnames, filenames in os.walk(path):
+        for dirpath, _, filenames in os.walk(path):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 if not os.path.islink(fp): total += os.path.getsize(fp)
@@ -28,9 +28,13 @@ def get_dir_size(path):
 def run_cms():
     logging.basicConfig(level=logging.INFO)
 
-    APPDATA = os.environ.get('APPDATA', os.path.expanduser('~'))
-    OMNI_DIR = os.path.join(APPDATA, 'OmniScreenData')
+    # CORRECTION DES PERTES DE MOTS DE PASSE (APPDATA)
+    # L'Application est desormais verrouillee sur LocalAppData au lieu d'AppData Roaming
+    # pour eviter les effacements par les nettoyeurs PC.
+    LOCAL_APPDATA = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
+    OMNI_DIR = os.path.join(LOCAL_APPDATA, 'OmniScreenData')
     UPLOAD_FOLDER = os.path.join(OMNI_DIR, 'uploads')
+    
     os.makedirs(OMNI_DIR, exist_ok=True)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
     db_path = os.path.join(OMNI_DIR, 'omniscreen.db')
@@ -75,7 +79,7 @@ def run_cms():
         title = db.Column(db.String(150))
         m_type = db.Column(db.String(50))
         content = db.Column(db.Text)
-        is_active = db.Column(db.Boolean, default=False) # Case a cocher Planification
+        is_active = db.Column(db.Boolean, default=False)
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -112,12 +116,15 @@ def run_cms():
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        # Statistiques Reelles
+        # REPARATION DES STATISTIQUES EN DIRECT DU DASHBOARD
         s_count = Display.query.count()
         m_count = MediaItem.query.count()
         a_count = MediaItem.query.filter_by(is_active=True).count()
-        bw = f"{(get_dir_size(app.config['UPLOAD_FOLDER']) / (1024*1024)):.1f} MB"
-        return render_template('dashboard.html', user=current_user, active_page='dashboard', screens_count=s_count, media_count=m_count, active_media=a_count, bandwidth=bw)
+        bw = f"{(get_dir_size(app.config['UPLOAD_FOLDER']) / (1024*1024)):.2f} MB"
+        recent_displays = Display.query.order_by(Display.id.desc()).limit(3).all()
+        return render_template('dashboard.html', user=current_user, active_page='dashboard', 
+                               screens_count=s_count, media_count=m_count, 
+                               active_media=a_count, bandwidth=bw, recent_displays=recent_displays)
 
     @app.route('/displays')
     @login_required
@@ -181,8 +188,7 @@ def run_cms():
             import yt_dlp
             ydl_opts = {'outtmpl': os.path.join(app.config['UPLOAD_FOLDER'], f'{title}.%(ext)s'), 'format': 'best'}
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                # Trouver le fichier telecharge reel
+                ydl.extract_info(url, download=True)
                 files = glob.glob(os.path.join(app.config['UPLOAD_FOLDER'], f"{title}.*"))
                 if files:
                     saved_name = os.path.basename(files[0])
