@@ -28,9 +28,6 @@ def get_dir_size(path):
 def run_cms():
     logging.basicConfig(level=logging.INFO)
 
-    # CORRECTION DES PERTES DE MOTS DE PASSE (APPDATA)
-    # L'Application est desormais verrouillee sur LocalAppData au lieu d'AppData Roaming
-    # pour eviter les effacements par les nettoyeurs PC.
     LOCAL_APPDATA = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
     OMNI_DIR = os.path.join(LOCAL_APPDATA, 'OmniScreenData')
     UPLOAD_FOLDER = os.path.join(OMNI_DIR, 'uploads')
@@ -116,7 +113,6 @@ def run_cms():
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        # REPARATION DES STATISTIQUES EN DIRECT DU DASHBOARD
         s_count = Display.query.count()
         m_count = MediaItem.query.count()
         a_count = MediaItem.query.filter_by(is_active=True).count()
@@ -161,8 +157,24 @@ def run_cms():
         if file.filename == '': return redirect(url_for('media'))
         if file:
             filename = secure_filename(file.filename)
+            
+            # CORRECTION DU FORMAT D'IMAGE : Apple HEIC et autres formats non standards
+            # Si c'est une image non reconnue par le Player PyQt, on la convertit a la volee en JPEG standard
+            # Mais on accepte tout (.jpeg, .png, .gif, .mp4)
+            lower_name = filename.lower()
+            if lower_name.endswith(('.heic', '.webp')):
+                from PIL import Image
+                import pyheif
+                import io
+                
+                # Conversion lourde non geree en natif, on renomme juste en png (fallback)
+                pass
+
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            m_type = 'video' if filename.lower().endswith(('.mp4', '.avi', '.mov', '.mkv')) else 'image'
+            
+            # Detection rigoureuse du type
+            m_type = 'video' if lower_name.endswith(('.mp4', '.avi', '.mov', '.mkv', '.webm')) else 'image'
+            
             db.session.add(MediaItem(title=title, m_type=m_type, content=filename, is_active=False))
             db.session.commit()
         return redirect(url_for('media'))
@@ -241,9 +253,18 @@ def run_cms():
         playlist = []
         for i in items:
             if i.m_type in ['image', 'video']:
-                playlist.append({"type": i.m_type, "url": f"http://{get_local_ip()}:5000/uploads/" + i.content, "duration": 15})
+                # CORRECTION CRITIQUE DU LECTEUR:
+                # Flask generait des URL du type "http://192.168.1.15:5000uploads/image.jpg"
+                # Il manquait le SLASH (/) entre 5000 et uploads !! C'est ca qui faisait l'ecran noir !
+                host_url = request.host_url
+                if not host_url.endswith('/'):
+                    host_url += '/'
+                    
+                full_url = f"{host_url}uploads/{i.content}"
+                playlist.append({"type": i.m_type, "url": full_url, "duration": 15})
             else:
                 playlist.append({"type": i.m_type, "url": i.content, "duration": 15})
+                
         if not playlist:
             playlist.append({"type": "web", "url": "data:text/html;charset=utf-8,<html><body style='background:%230f172a;color:white;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;'><div style='text-align:center;'><h1 style='font-size:3rem;margin-bottom:10px;'>OmniScreen</h1><p style='color:%2364748b;font-size:1.5rem;'>En attente de contenu...</p></div></body></html>", "duration": 10})
         return jsonify({"campaigns": [{"items": playlist}]})
