@@ -1,0 +1,72 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Profils de Paramètres{% endblock %}
+{% block header_title %}Profils de Paramètres{% endblock %}
+{% block header_subtitle %}Configurez le matériel de vos lecteurs à distance.{% endblock %}
+
+{% block content %}
+<div class="card-box" style="padding: 0;">
+    <div style="padding: 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+        <h5 style="margin: 0; font-weight: 700;">Profil Matériel (Défaut)</h5>
+    </div>
+    
+    <div style="padding: 30px; max-width: 800px;">
+        <form action="/save_generic" method="POST">
+            <div class="row mb-4">
+                <div class="col-md-4"><label style="font-weight: 600;">Orientation de l'écran</label></div>
+                <div class="col-md-8">
+                    <select class="form-select" name="orientation">
+                        <option>Paysage (Landscape - 0°)</option>
+                        <option>Portrait (Portrait - 90°)</option>
+                        <option>Portrait Inversé (270°)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-4"><label style="font-weight: 600;">Intervalle de synchronisation</label></div>
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <input type="number" class="form-control" name="sync_interval" value="60">
+                        <span class="input-group-text">secondes</span>
+                    </div>
+                    <small class="text-muted">A quelle frequence le lecteur interroge l'API ?</small>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-4"><label style="font-weight: 600;">Gestion de l'énergie (Veille)</label></div>
+                <div class="col-md-4">
+                    <label class="text-muted text-sm">Heure d'allumage</label>
+                    <input type="time" class="form-control" name="wake_time" value="08:00">
+                </div>
+                <div class="col-md-4">
+                    <label class="text-muted text-sm">Heure d'extinction</label>
+                    <input type="time" class="form-control" name="sleep_time" value="20:00">
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-4"><label style="font-weight: 600;">Options Avancées Hardware</label></div>
+                <div class="col-md-8">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="hw_accel" checked>
+                        <label class="form-check-label">Activer l'accélération matérielle (GPU)</label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="hw_mute">
+                        <label class="form-check-label">Mettre l'écran en sourdine (Mute)</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="hw_reboot">
+                        <label class="form-check-label">Redémarrage quotidien à minuit</label>
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <button type="submit" class="btn btn-primary">Sauvegarder et Déployer sur les Écrans</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

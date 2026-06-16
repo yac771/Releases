@@ -1,0 +1,60 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Utilisateurs{% endblock %}
+{% block header_title %}Gestion des Utilisateurs{% endblock %}
+{% block header_subtitle %}Gérez les accès, les mots de passe et les permissions du CMS.{% endblock %}
+
+{% block content %}
+<div class="card-box" style="padding: 0; overflow: hidden;">
+    <div class="d-flex justify-content-between align-items-center" style="padding: 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+        <h5 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">Comptes Administrateurs</h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal"><i class="fa fa-user-plus me-2"></i>Nouvel Utilisateur</button>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nom d'utilisateur</th>
+                    <th>Rôle / Permissions</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u.id }}</td>
+                    <td style="font-weight: 700;">{{ u.username }}</td>
+                    <td><span class="badge {% if u.role == 'superadmin' %}bg-danger{% else %}bg-primary{% endif %}">{{ u.role|default('admin') }}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-light" style="border: 1px solid #e2e8f0;"><i class="fa fa-pen"></i> Modifier</button>
+                        {% if u.id != current_user.id %}
+                        <a href="/delete_user/{{ u.id }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Supprimer ce compte ?')"><i class="fa fa-trash"></i></a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/add_user" method="POST">
+                <div class="modal-header"><h5 class="modal-title">Créer un Compte</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="text" class="form-control mb-3" name="username" placeholder="Identifiant" required>
+                    <input type="password" class="form-control mb-3" name="password" placeholder="Mot de passe" required>
+                    <select class="form-select mb-3" name="role">
+                        <option value="admin">Administrateur Standard</option>
+                        <option value="superadmin">Super Admin (Tout pouvoir)</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary w-100">Créer le compte</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

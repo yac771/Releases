@@ -8,48 +8,37 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; overflow-x: hidden; }
-        
-        /* RESPONSIVE LAYOUT */
         .wrapper { display: flex; flex-direction: row; height: 100vh; overflow: hidden; }
-        
-        /* SIDEBAR COMPATIBLE MOBILE */
-        .sidebar { background-color: #0f172a; color: #fff; display: flex; flex-direction: column; width: 260px; flex-shrink: 0; transition: transform 0.3s ease-in-out; z-index: 1000;}
-        .sidebar-brand { font-size: 24px; font-weight: 800; letter-spacing: -1px; padding: 20px 25px 30px; position: relative;}
+        .sidebar { background-color: #0f172a; color: #fff; display: flex; flex-direction: column; width: 280px; flex-shrink: 0; transition: transform 0.3s ease-in-out; z-index: 1000; overflow-y: auto;}
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-thumb { background-color: #1e293b; border-radius: 10px; }
+        .sidebar-brand { font-size: 26px; font-weight: 800; letter-spacing: -1px; padding: 20px 25px; position: relative; border-bottom: 1px solid #1e293b;}
         .sidebar-brand span { color: #3b82f6; }
-        .beta-badge-sidebar { position: absolute; top: 22px; right: 20px; background: #ef4444; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 1px;}
-        .sidebar-item { color: #94a3b8; padding: 12px 25px; display: block; text-decoration: none; font-weight: 500; font-size: 14px; border-left: 3px solid transparent; transition: all 0.2s; }
+        .beta-badge-sidebar { position: absolute; top: 22px; right: 20px; background: #10b981; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 1px;}
+        .sidebar-category { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; padding: 20px 25px 5px 25px; }
+        .sidebar-item { color: #cbd5e1; padding: 10px 25px; display: block; text-decoration: none; font-weight: 500; font-size: 14px; border-left: 3px solid transparent; transition: all 0.2s; }
         .sidebar-item:hover, .sidebar-item.active { background-color: #1e293b; color: #fff; border-left-color: #3b82f6; }
-        .sidebar-item i { width: 25px; color: #64748b; }
+        .sidebar-item i { width: 25px; color: #64748b; text-align: center; margin-right: 5px;}
         .sidebar-item.active i { color: #3b82f6; }
-        .user-profile { padding: 0 25px 20px 25px; display: flex; align-items: center; }
-        .user-avatar { width: 40px; height: 40px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; margin-right: 15px; }
-        
-        /* MOBILE MENU TOGGLE */
         .mobile-header { display: none; background: #0f172a; padding: 15px 20px; color: white; justify-content: space-between; align-items: center; }
         .menu-toggle { background: transparent; border: none; color: white; font-size: 24px; }
-        
-        /* CONTENT AREA */
         .main-panel { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; background-color: #f8fafc;}
         .page-header { background: #ffffff; padding: 20px 30px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;}
         .page-title h2 { margin: 0; font-size: 22px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 10px;}
         .page-title p { margin: 0; color: #64748b; font-size: 13px; font-weight: 500; }
         .content-area { padding: 30px; }
-        
         .card-box { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: 20px; padding: 20px; }
         .btn-primary { background: #3b82f6; border: none; font-weight: 600; padding: 8px 16px; border-radius: 8px; }
         .btn-primary:hover { background: #2563eb; }
         .table th { border-top: none; color: #64748b; font-weight: 600; font-size: 13px; text-transform: uppercase; padding: 15px 20px; }
         .table td { padding: 15px 20px; vertical-align: middle; color: #334155; font-size: 14px; font-weight: 500; border-bottom: 1px solid #e2e8f0; }
-        
-        .ad-banner-container { margin-top: auto; padding: 20px; text-align: center; border-top: 1px solid #1e293b; }
+        .ad-banner-container { margin-top: 20px; padding: 20px; text-align: center; border-top: 1px solid #1e293b; }
         .ad-banner { background: #1e293b; border-radius: 8px; padding: 15px; color: #94a3b8; font-size: 12px; border: 1px dashed #3b82f6; cursor: pointer; transition: all 0.3s; }
         .ad-banner:hover { background: #3b82f6; color: white; border-style: solid; }
-        .ad-badge { background: #0f172a; color: #3b82f6; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-bottom: 8px; display: inline-block; }
         
-        /* MEDIA QUERIES MOBILE (iPhone, etc.) */
         @media (max-width: 768px) {
             .wrapper { flex-direction: column; }
-            .sidebar { position: absolute; left: -260px; height: 100vh; }
+            .sidebar { position: absolute; left: -280px; height: 100vh; }
             .sidebar.active { left: 0; }
             .mobile-header { display: flex; }
             .content-area { padding: 15px; }
@@ -62,7 +51,6 @@
 </head>
 <body>
     
-    <!-- HEADER MOBILE (Affiché que sur téléphone) -->
     <div class="mobile-header">
         <div style="font-size: 20px; font-weight: 800; letter-spacing: -1px;">Omni<span style="color: #3b82f6;">Screen</span></div>
         <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('active')"><i class="fa fa-bars"></i></button>
@@ -70,26 +58,45 @@
 
     <div class="wrapper">
         <div class="sidebar" id="sidebar">
-            <div>
-                <div class="sidebar-brand d-none d-md-block">Omni<span>Screen</span> <div class="beta-badge-sidebar">BETA</div></div>
-                <div class="user-profile mt-4 mt-md-0">
-                    <div class="user-avatar">{{ user.username[0]|upper }}</div>
-                    <div><div style="font-weight: 700; font-size: 14px;">{{ user.username }}</div><div style="color: #64748b; font-size: 12px;">Administrateur</div></div>
-                </div>
-                <a href="/dashboard" class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}"><i class="fa fa-chart-pie"></i> Vue d'ensemble</a>
-                <a href="/displays" class="sidebar-item {% if active_page == 'displays' %}active{% endif %}"><i class="fa fa-tv"></i> Écrans (Players)</a>
-                <a href="/schedule" class="sidebar-item {% if active_page == 'schedule' %}active{% endif %}"><i class="fa fa-calendar-alt"></i> Planification</a>
-                <a href="/media" class="sidebar-item {% if active_page == 'media' %}active{% endif %}"><i class="fa fa-photo-video"></i> Bibliothèque Médias</a>
-                <a href="/settings" class="sidebar-item {% if active_page == 'settings' %}active{% endif %}"><i class="fa fa-cog"></i> Paramètres</a>
-                <!-- Bouton fermer sur mobile -->
-                <a href="#" class="sidebar-item d-md-none text-danger" onclick="document.getElementById('sidebar').classList.remove('active')"><i class="fa fa-times"></i> Fermer le menu</a>
+            <div class="sidebar-brand d-none d-md-block">Omni<span>Screen</span> <div class="beta-badge-sidebar">v4.1</div></div>
+            
+            <div style="padding: 20px 25px 0 25px; display: flex; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 20px;">
+                <div class="user-avatar" style="width: 35px; height:35px; font-size:14px;">{{ user.username[0]|upper }}</div>
+                <div><div style="font-weight: 700; font-size: 14px;">{{ user.username }}</div><div style="color: #64748b; font-size: 12px;">Admin Système</div></div>
             </div>
+
+            <a href="/dashboard" class="sidebar-item mt-3 {% if active_page == 'dashboard' %}active{% endif %}"><i class="fa fa-chart-pie"></i> Vue d'ensemble</a>
+
+            <div class="sidebar-category">Planification</div>
+            <a href="/schedule" class="sidebar-item {% if active_page == 'schedule' %}active{% endif %}"><i class="fa fa-calendar-alt"></i> Agenda & Calendrier</a>
+            <a href="/module/Campagnes" class="sidebar-item {% if active_page == 'Campagnes' %}active{% endif %}"><i class="fa fa-layer-group"></i> Campagnes</a>
+
+            <div class="sidebar-category">Design (Conception)</div>
+            <a href="/layouts" class="sidebar-item {% if active_page == 'layouts' %}active{% endif %}"><i class="fa fa-object-group"></i> Dispositions (Layouts)</a>
+            <a href="/module/Modèles" class="sidebar-item {% if active_page == 'Modèles' %}active{% endif %}"><i class="fa fa-file-image"></i> Modèles (Templates)</a>
+            <a href="/fonts" class="sidebar-item {% if active_page == 'fonts' %}active{% endif %}"><i class="fa fa-font"></i> Polices</a>
+
+            <div class="sidebar-category">Bibliothèque</div>
+            <a href="/media" class="sidebar-item {% if active_page == 'media' %}active{% endif %}"><i class="fa fa-photo-video"></i> Médias & Widgets</a>
+            <a href="/module/Playlists" class="sidebar-item {% if active_page == 'Playlists' %}active{% endif %}"><i class="fa fa-list"></i> Listes de lecture (Playlists)</a>
+
+            <div class="sidebar-category">Écrans (Displays)</div>
+            <a href="/displays" class="sidebar-item {% if active_page == 'displays' %}active{% endif %}"><i class="fa fa-tv"></i> Écrans connectés</a>
+            <a href="/module/Groupes d'ecrans" class="sidebar-item {% if active_page == 'Groupes d\'ecrans' %}active{% endif %}"><i class="fa fa-network-wired"></i> Groupes d'écrans</a>
+            <a href="/display_settings" class="sidebar-item {% if active_page == 'display_settings' %}active{% endif %}"><i class="fa fa-sliders-h"></i> Profils de paramètres</a>
+
+            <div class="sidebar-category">Administration</div>
+            <a href="/users" class="sidebar-item {% if active_page == 'users' %}active{% endif %}"><i class="fa fa-users"></i> Utilisateurs</a>
+            <a href="/settings" class="sidebar-item {% if active_page == 'settings' %}active{% endif %}"><i class="fa fa-cog"></i> Paramètres globaux</a>
+            <a href="/logs" class="sidebar-item {% if active_page == 'logs' %}active{% endif %}"><i class="fa fa-server"></i> Maintenance & Logs</a>
+
+            <a href="#" class="sidebar-item d-md-none text-danger mt-4" onclick="document.getElementById('sidebar').classList.remove('active')"><i class="fa fa-times"></i> Fermer le menu</a>
             
             <div class="ad-banner-container">
                 <div class="ad-banner" onclick="window.open('https://www.google.com/adsense', '_blank')">
-                    <span class="ad-badge">SPONSORISÉ</span><br>
-                    <strong>Découvrez nos Écrans Pro</strong><br>
-                    -15% sur les players Android certifiés OmniScreen. Cliquez ici !
+                    <span style="background: #0f172a; color: #3b82f6; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-bottom: 8px; display: inline-block;">PARTENAIRE</span><br>
+                    <strong>Acheter du Matériel Pro</strong><br>
+                    Découvrez nos offres d'écrans certifiés OmniScreen !
                 </div>
             </div>
         </div>
@@ -97,7 +104,7 @@
         <div class="main-panel" onclick="if(window.innerWidth<=768){document.getElementById('sidebar').classList.remove('active')}">
             <div class="page-header">
                 <div class="page-title">
-                    <h2>{% block header_title %}Titre{% endblock %} <span class="badge bg-danger" style="font-size: 10px; vertical-align: middle;">BETA</span></h2>
+                    <h2>{% block header_title %}Titre{% endblock %}</h2>
                     <p>{% block header_subtitle %}Sous-titre{% endblock %}</p>
                 </div>
                 <div class="d-flex align-items-center mt-3 mt-md-0">

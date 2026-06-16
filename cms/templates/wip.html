@@ -1,0 +1,15 @@
+{% extends "base_dashboard.html" %}
+{% block title %}{{ feature_name }}{% endblock %}
+{% block header_title %}{{ feature_name }}{% endblock %}
+{% block header_subtitle %}Module en cours de développement par l'équipe d'ingénierie OmniScreen.{% endblock %}
+
+{% block content %}
+<div class="card-box text-center" style="padding: 60px 20px;">
+    <i class="fa fa-tools fa-5x mb-4" style="color: #3b82f6;"></i>
+    <h2 style="font-weight: 800; color: #0f172a;">Module Bientôt Disponible</h2>
+    <p style="color: #64748b; font-size: 16px; max-width: 600px; margin: 0 auto;">
+        Ce module ({{ feature_name }}) fait partie de la roadmap de la version 4.x d'OmniScreen. Nos ingénieurs travaillent actuellement sur son intégration. Il sera déployé automatiquement sur votre CMS via une mise à jour OTA très prochainement !
+    </p>
+    <a href="/dashboard" class="btn btn-primary mt-4">Retour au tableau de bord</a>
+</div>
+{% endblock %}

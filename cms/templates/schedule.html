@@ -13,7 +13,7 @@
                     <i class="fa fa-sun me-2"></i> Boucle Principale
                 </button>
             </div>
-            <button class="btn btn-outline-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#newCampModal">Créer une campagne</button>
+            <a href="/module/Campagnes" class="btn btn-outline-primary w-100 mt-3">Gérer les Campagnes</a>
         </div>
     </div>
     
@@ -53,18 +53,6 @@
                     {% endfor %}
                 </tbody>
             </table>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="newCampModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">Nouvelle Campagne</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <input type="text" class="form-control" placeholder="Nom de la boucle">
-                <button class="btn btn-primary w-100 mt-3" data-bs-dismiss="modal" onclick="alert('Disponible en version Premium.')">Sauvegarder</button>
-            </div>
         </div>
     </div>
 </div>

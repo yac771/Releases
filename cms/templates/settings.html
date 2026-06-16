@@ -1,14 +1,14 @@
 {% extends "base_dashboard.html" %}
 {% block title %}Paramètres{% endblock %}
-{% block header_title %}Settings{% endblock %}
-{% block header_subtitle %}Configuration générale du CMS.{% endblock %}
+{% block header_title %}Configuration Globale{% endblock %}
+{% block header_subtitle %}Plus de 30 options pour parametrer votre CMS OmniScreen.{% endblock %}
 
 {% block extra_css %}
 <style>
     .nav-tabs .nav-link { color: #3b82f6; font-weight: 500; border:none; border-bottom: 2px solid transparent; padding: 10px 20px; }
     .nav-tabs .nav-link.active { color: #0f172a; border-bottom: 2px solid #0f172a; background: transparent; font-weight: 600; }
-    .form-group-xibo { display: flex; margin-bottom: 20px; }
-    .form-group-xibo label { width: 250px; text-align: right; padding-right: 20px; font-weight: 700; color: #334155; font-size: 14px; padding-top: 8px; }
+    .form-group-xibo { display: flex; margin-bottom: 20px; align-items: flex-start;}
+    .form-group-xibo label { width: 250px; text-align: right; padding-right: 20px; font-weight: 700; color: #334155; font-size: 14px; padding-top: 8px; flex-shrink: 0;}
     .form-group-xibo .input-area { flex-grow: 1; max-width: 600px; }
     .form-group-xibo .help-text { font-size: 12px; color: #64748b; margin-top: 5px; }
     .btn-save { background: #10b981; color: white; width: 100%; font-weight: bold; padding: 12px; border-radius: 4px; border: none; max-width: 850px; }
@@ -17,63 +17,86 @@
 
 {% block content %}
 <div class="card-box" style="padding: 0;">
-    <div class="d-flex justify-content-between align-items-center" style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3" style="padding: 20px; border-bottom: 1px solid #e2e8f0;">
         <h5 style="margin: 0; font-weight: 700;">Settings</h5>
         <div>
-            <button class="btn btn-sm" style="background:#10b981; color:white;" onclick="alert('Feature Premium')"><i class="fa fa-cloud-download-alt me-1"></i> Import</button>
-            <button class="btn btn-sm" style="background:#0ea5e9; color:white;" onclick="alert('Feature Premium')"><i class="fa fa-cloud-upload-alt me-1"></i> Export</button>
-            <button class="btn btn-sm" style="background:#ef4444; color:white;" onclick="alert('Feature Premium')"><i class="fa fa-trash me-1"></i> Tidy Library</button>
+            <a href="/settings/action/import" class="btn btn-sm btn-success"><i class="fa fa-cloud-download-alt me-1"></i> Import DB</a>
+            <a href="/settings/action/export" class="btn btn-sm btn-info text-white"><i class="fa fa-cloud-upload-alt me-1"></i> Export DB</a>
+            <a href="/settings/action/tidy" class="btn btn-sm btn-danger"><i class="fa fa-broom me-1"></i> Tidy Library</a>
         </div>
     </div>
     
     <div style="padding: 20px;">
-        <ul class="nav nav-tabs mb-4">
-            <li class="nav-item"><a class="nav-link" href="#" onclick="alert('Cet onglet sera disponible dans la prochaine MAJ.')">Configuration</a></li>
-            <li class="nav-item"><a class="nav-link" href="#" onclick="alert('Cet onglet sera disponible dans la prochaine MAJ.')">Defaults</a></li>
-            <li class="nav-item"><a class="nav-link" href="#" onclick="alert('Cet onglet sera disponible dans la prochaine MAJ.')">Displays</a></li>
-            <li class="nav-item"><a class="nav-link" href="#" onclick="alert('Cet onglet sera disponible dans la prochaine MAJ.')">General</a></li>
-            <li class="nav-item"><a class="nav-link active" href="#">Regional</a></li>
-            <li class="nav-item"><a class="nav-link" href="#" onclick="alert('Cet onglet sera disponible dans la prochaine MAJ.')">Users</a></li>
+        <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#general">General</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#regional">Regional</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#config">Configuration</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#defaults">Defaults</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#displays">Displays</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#advanced">Avancé</button></li>
         </ul>
 
-        <h4 style="margin-bottom: 25px; color: #0f172a;">Regional</h4>
-
-        <form>
-            <div class="form-group-xibo">
-                <label>Default Language</label>
-                <div class="input-area">
-                    <input type="text" class="form-control" value="fr_FR">
-                    <div class="help-text">The default language to use</div>
+        <form action="/save_settings" method="POST">
+            <div class="tab-content">
+                <!-- GENERAL -->
+                <div class="tab-pane fade show active" id="general">
+                    <div class="form-group-xibo"><label>Nom de l'Instance</label><div class="input-area"><input type="text" class="form-control" name="s_inst_name" value="OmniScreen Server"><div class="help-text">Le nom global de votre CMS.</div></div></div>
+                    <div class="form-group-xibo"><label>Email Administrateur</label><div class="input-area"><input type="email" class="form-control" name="s_email" value="admin@omniscreen.local"><div class="help-text">Email pour recevoir les alertes des ecrans.</div></div></div>
+                    <div class="form-group-xibo"><label>Thème de l'interface</label><div class="input-area"><select class="form-select" name="s_theme"><option>Light (Clair)</option><option>Dark (Sombre)</option></select><div class="help-text">Apparence du CMS.</div></div></div>
+                    <div class="form-group-xibo"><label>URL du Logo Custom</label><div class="input-area"><input type="text" class="form-control" name="s_logo" value=""><div class="help-text">Lien vers le logo de votre entreprise (PNG/JPG).</div></div></div>
+                    <div class="form-group-xibo"><label>API Publique</label><div class="input-area"><div class="form-check mt-2"><input type="checkbox" class="form-check-input" checked></div><div class="help-text">Autoriser les requetes tierces (CORS).</div></div></div>
                 </div>
-            </div>
 
-            <div class="form-group-xibo">
-                <label>Timezone</label>
-                <div class="input-area">
-                    <select class="form-select">
-                        <option>(GMT+01:00) Europe, Paris</option>
-                        <option>(GMT) Europe, London</option>
-                    </select>
-                    <div class="help-text">Set the default timezone for the application</div>
+                <!-- REGIONAL -->
+                <div class="tab-pane fade" id="regional">
+                    <div class="form-group-xibo"><label>Default Language</label><div class="input-area"><input type="text" class="form-control" name="s_lang" value="fr_FR"><div class="help-text">The default language to use</div></div></div>
+                    <div class="form-group-xibo"><label>Timezone</label><div class="input-area"><select class="form-select" name="s_tz"><option>(GMT+01:00) Europe, Paris</option><option>(GMT) Europe, London</option></select><div class="help-text">Set the default timezone for the application</div></div></div>
+                    <div class="form-group-xibo"><label>Date Format</label><div class="input-area"><input type="text" class="form-control" name="s_datef" value="Y-m-d"><div class="help-text">The Date Format to use when displaying dates.</div></div></div>
+                    <div class="form-group-xibo"><label>Time Format</label><div class="input-area"><input type="text" class="form-control" name="s_timef" value="H:i:s"><div class="help-text">The Time Format to use.</div></div></div>
+                    <div class="form-group-xibo"><label>First Day of Week</label><div class="input-area"><select class="form-select" name="s_fdow"><option>Lundi</option><option>Dimanche</option></select><div class="help-text">Jour de depart du calendrier.</div></div></div>
+                    <div class="form-group-xibo"><label>Devise (Currency)</label><div class="input-area"><input type="text" class="form-control" name="s_curr" value="EUR (€)"><div class="help-text">Devise pour les rapports financiers.</div></div></div>
                 </div>
-            </div>
 
-            <div class="form-group-xibo">
-                <label>Date Format</label>
-                <div class="input-area">
-                    <input type="text" class="form-control" value="Y-m-d H:i">
-                    <div class="help-text">The Date Format to use when displaying dates in the CMS.</div>
-                    
-                    <div class="form-check mt-3">
-                        <input class="form-check-input" type="checkbox" checked id="detectLang">
-                        <label class="form-check-label" for="detectLang" style="text-align: left; width: auto; padding: 0; font-weight: 500;">Detect Language</label>
-                    </div>
-                    <div class="help-text">Detect the browser language?</div>
+                <!-- CONFIGURATION -->
+                <div class="tab-pane fade" id="config">
+                    <div class="form-group-xibo"><label>Max Upload Size</label><div class="input-area"><div class="input-group"><input type="number" class="form-control" name="s_maxup" value="2048"><span class="input-group-text">MB</span></div><div class="help-text">Taille max par fichier.</div></div></div>
+                    <div class="form-group-xibo"><label>Extensions autorisées</label><div class="input-area"><input type="text" class="form-control" name="s_ext" value="jpg,png,mp4,avi,pdf"><div class="help-text">Fichiers acceptes dans la bibliotheque.</div></div></div>
+                    <div class="form-group-xibo"><label>Serveur SMTP</label><div class="input-area"><input type="text" class="form-control" name="s_smtp" value="smtp.gmail.com"><div class="help-text">Serveur d'envoi d'emails.</div></div></div>
+                    <div class="form-group-xibo"><label>Port SMTP</label><div class="input-area"><input type="number" class="form-control" name="s_port" value="465"><div class="help-text">465 (SSL) ou 587 (TLS).</div></div></div>
+                    <div class="form-group-xibo"><label>Utilisateur SMTP</label><div class="input-area"><input type="text" class="form-control" name="s_smtp_u" value=""><div class="help-text">Login mail.</div></div></div>
+                    <div class="form-group-xibo"><label>Forcer HTTPS</label><div class="input-area"><div class="form-check mt-2"><input type="checkbox" class="form-check-input"></div><div class="help-text">Rediriger HTTP vers HTTPS.</div></div></div>
+                </div>
+
+                <!-- DEFAULTS -->
+                <div class="tab-pane fade" id="defaults">
+                    <div class="form-group-xibo"><label>Durée Image (Défaut)</label><div class="input-area"><div class="input-group"><input type="number" class="form-control" name="s_def_dur" value="10"><span class="input-group-text">sec</span></div><div class="help-text">Temps d'affichage d'une image sans duree specifiee.</div></div></div>
+                    <div class="form-group-xibo"><label>Volume Vidéo (Défaut)</label><div class="input-area"><input type="range" class="form-range" name="s_def_vol" min="0" max="100" value="50"><div class="help-text">Volume initial des players (0 a 100).</div></div></div>
+                    <div class="form-group-xibo"><label>Transition par défaut</label><div class="input-area"><select class="form-select" name="s_def_trans"><option>Fade In (Fondu)</option><option>Cut (Brutal)</option><option>Slide Left</option></select><div class="help-text">Effet entre les medias.</div></div></div>
+                    <div class="form-group-xibo"><label>Durée Transition</label><div class="input-area"><div class="input-group"><input type="number" class="form-control" name="s_def_tdur" value="500"><span class="input-group-text">ms</span></div><div class="help-text">Duree de l'animation en millisecondes.</div></div></div>
+                    <div class="form-group-xibo"><label>Couleur de Fond</label><div class="input-area"><input type="color" class="form-control form-control-color" name="s_def_bg" value="#000000"><div class="help-text">Arriere-plan des lecteurs.</div></div></div>
+                </div>
+
+                <!-- DISPLAYS -->
+                <div class="tab-pane fade" id="displays">
+                    <div class="form-group-xibo"><label>Offline Timeout</label><div class="input-area"><div class="input-group"><input type="number" class="form-control" name="s_disp_off" value="5"><span class="input-group-text">mins</span></div><div class="help-text">Temps avant de marquer un ecran comme Hors-Ligne.</div></div></div>
+                    <div class="form-group-xibo"><label>Heartbeat Interval</label><div class="input-area"><div class="input-group"><input type="number" class="form-control" name="s_disp_hb" value="60"><span class="input-group-text">sec</span></div><div class="help-text">Frequence du ping reseau du lecteur.</div></div></div>
+                    <div class="form-group-xibo"><label>Screenshot Interval</label><div class="input-area"><div class="input-group"><input type="number" class="form-control" name="s_disp_ss" value="0"><span class="input-group-text">mins</span></div><div class="help-text">Demande de capture d'ecran (0 = desactive).</div></div></div>
+                    <div class="form-group-xibo"><label>Download Window Start</label><div class="input-area"><input type="time" class="form-control" name="s_disp_dws" value="00:00"><div class="help-text">Heure a partir de laquelle le player peut telecharger.</div></div></div>
+                    <div class="form-group-xibo"><label>Download Window End</label><div class="input-area"><input type="time" class="form-control" name="s_disp_dwe" value="23:59"><div class="help-text">Heure de fin d'autorisation de telechargement.</div></div></div>
+                </div>
+
+                <!-- ADVANCED -->
+                <div class="tab-pane fade" id="advanced">
+                    <div class="form-group-xibo"><label>Mode Debug</label><div class="input-area"><div class="form-check mt-2"><input type="checkbox" class="form-check-input" name="s_adv_dbg"></div><div class="help-text">Enregistrement verbeux des logs.</div></div></div>
+                    <div class="form-group-xibo"><label>Purge Logs After</label><div class="input-area"><div class="input-group"><input type="number" class="form-control" name="s_adv_purge" value="30"><span class="input-group-text">jours</span></div><div class="help-text">Nettoyage auto de la BDD.</div></div></div>
+                    <div class="form-group-xibo"><label>Max Concurrent DL</label><div class="input-area"><input type="number" class="form-control" name="s_adv_dl" value="2"><div class="help-text">Nombre max de telechargements en parallele par lecteur.</div></div></div>
+                    <div class="form-group-xibo"><label>Cle secrète du CMS</label><div class="input-area"><input type="password" class="form-control" name="s_adv_key" value="omniscreen-key"><div class="help-text">Pour la connexion API externe.</div></div></div>
+                    <div class="form-group-xibo"><label>Forcer Mise à jour Player</label><div class="input-area"><div class="form-check mt-2"><input type="checkbox" class="form-check-input" name="s_adv_upd"></div><div class="help-text">Les lecteurs demanderont l'Update GitHub au reboot.</div></div></div>
                 </div>
             </div>
 
             <div style="max-width: 850px; margin-top: 30px;">
-                <button type="button" class="btn-save" onclick="alert('Paramètres sauvegardés avec succès !')">Save</button>
+                <button type="submit" class="btn-save">Sauvegarder les 30+ paramètres</button>
             </div>
         </form>
     </div>
