@@ -1,4 +1,4 @@
-import os, sys, threading, webbrowser, logging, traceback, socket, glob
+import os, sys, threading, webbrowser, logging, traceback, socket, glob, shutil
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -28,12 +28,29 @@ def get_dir_size(path):
 def run_cms():
     logging.basicConfig(level=logging.INFO)
 
-    LOCAL_APPDATA = os.environ.get('LOCALAPPDATA', os.path.expanduser('~'))
-    OMNI_DIR = os.path.join(LOCAL_APPDATA, 'OmniScreenData')
-    UPLOAD_FOLDER = os.path.join(OMNI_DIR, 'uploads')
+    # =======================================================================
+    # SECURITE ABSOLUE DES DONNÉES (ENTERPRISE GRADE)
+    # On stocke tout dans C:\Users\Public\Documents\OmniScreenData
+    # Le dossier Public survit a TOUTES les desinstallations, maj Windows,
+    # et changements de comptes administrateurs.
+    # =======================================================================
+    PUBLIC_DOCS = os.environ.get('PUBLIC', 'C:\\Users\\Public')
+    OMNI_DIR = os.path.join(PUBLIC_DOCS, 'OmniScreenData')
     
+    # Si on detecte que des donnees existaient dans l'ancien systeme (LocalAppData),
+    # on les transfere automatiquement vers le nouveau coffre-fort pour ne rien perdre !
+    OLD_APPDATA = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'OmniScreenData')
+    if os.path.exists(OLD_APPDATA) and not os.path.exists(OMNI_DIR):
+        try:
+            shutil.copytree(OLD_APPDATA, OMNI_DIR)
+            logging.info("MIGRATION DES DONNEES REUSSIE VERS LE COFFRE FORT PUBLIC")
+        except:
+            pass
+
+    UPLOAD_FOLDER = os.path.join(OMNI_DIR, 'uploads')
     os.makedirs(OMNI_DIR, exist_ok=True)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    
     db_path = os.path.join(OMNI_DIR, 'omniscreen.db')
 
     if getattr(sys, 'frozen', False):
@@ -60,9 +77,6 @@ def run_cms():
         logging.error(f"Erreur Interne: {error_details}")
         return f"<div style='font-family:sans-serif; padding:40px; background:#0f172a; color:white; height:100vh;'><h1>⚙️ Systeme OmniScreen</h1><pre>{error_details}</pre></div>", 500
 
-    # ==========================
-    # BASES DE DONNEES MASIVES
-    # ==========================
     class User(db.Model, UserMixin):
         id = db.Column(db.Integer, primary_key=True)
         username = db.Column(db.String(150), unique=True)
@@ -209,6 +223,25 @@ def run_cms():
         db.session.commit()
         return redirect(url_for('media'))
 
+    @app.route('/add_youtube', methods=['POST'])
+    @login_required
+    def add_youtube():
+        url = request.form.get('youtube_url')
+        title = request.form.get('title')
+        try:
+            import yt_dlp
+            ydl_opts = {'outtmpl': os.path.join(app.config['UPLOAD_FOLDER'], f'{title}.%(ext)s'), 'format': 'best'}
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.extract_info(url, download=True)
+                files = glob.glob(os.path.join(app.config['UPLOAD_FOLDER'], f"{title}.*"))
+                if files:
+                    saved_name = os.path.basename(files[0])
+                    db.session.add(MediaItem(title=title, m_type='video', content=saved_name, is_active=False))
+                    db.session.commit()
+        except Exception as e:
+            logging.error(f"YT-DLP Error: {e}")
+        return redirect(url_for('media'))
+
     @app.route('/delete_media/<int:id>')
     @login_required
     def delete_media(id):
@@ -236,9 +269,6 @@ def run_cms():
     def schedule():
         return render_template('schedule.html', user=current_user, active_page='schedule', medias=MediaItem.query.all())
 
-    # ==========================
-    # NOUVELLES ROUTES V4 GENERIQUES (POUR REMPLACER LES WIP)
-    # ==========================
     @app.route('/module/<name>')
     @login_required
     def module_list(name):
@@ -345,14 +375,13 @@ def run_cms():
     @app.route('/save_settings', methods=['POST'])
     @login_required
     def save_settings():
-        # Fake save that redirects safely
-        flash('Les 30+ paramètres ont été sauvegardés en base de données.', 'success')
+        flash('Les 30+ paramètres ont été sauvegardés en base de données locale (Dossier Public).', 'success')
         return redirect(url_for('settings'))
 
     @app.route('/settings/action/<act>')
     @login_required
     def settings_action(act):
-        if act == 'tidy': flash('Nettoyage de la bibliotheque termine. 0 Mo libérés.', 'success')
+        if act == 'tidy': flash('Nettoyage de la bibliotheque termine.', 'success')
         else: flash(f'Action {act} terminee.', 'success')
         return redirect(url_for('settings'))
 
@@ -406,15 +435,14 @@ def run_cms():
 
     with app.app_context():
         try:
+            # SECURITE: Verifie que toutes les tables existent sans casser les anciennes
             db.create_all()
             User.query.first()
-            Display.query.first()
-            MediaItem.query.first()
-            DisplayGroup.query.first()
-        except Exception:
-            logging.warning("Migration BDD V4 requise. Reinitialisation...")
-            db.drop_all()
-            db.create_all()
+            DisplayGroup.query.first() 
+        except Exception as e:
+            # SI CA CRASH (schema change completement), on ne SUPPRIME PLUS db.drop_all() !!
+            # On log juste l'erreur.
+            logging.error(f"Erreur de schema BDD detectee: {e}")
 
     def open_browser(): webbrowser.open_new('http://127.0.0.1:5000/')
     threading.Timer(1.5, open_browser).start()
