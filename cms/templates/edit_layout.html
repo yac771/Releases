@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Studio Design - OmniScreen</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; display: flex; height: 100vh; font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; overflow: hidden; }
+        
+        .toolbar { width: 80px; background: #1e293b; display: flex; flex-direction: column; align-items: center; padding-top: 20px; border-right: 1px solid #334155; }
+        .tool-btn { width: 50px; height: 50px; border-radius: 8px; border: none; background: transparent; color: #94a3b8; font-size: 20px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; }
+        .tool-btn:hover { background: #3b82f6; color: white; }
+        
+        .workspace { flex-grow: 1; position: relative; display: flex; justify-content: center; align-items: center; background: #0f172a; overflow: hidden; }
+        
+        /* La vraie zone de travail TV (Echelle ~50% de 1920x1080) */
+        #canvas { width: 960px; height: 540px; background-color: {{ layout.bg_color }}; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.5); overflow: hidden; }
+        
+        .canvas-el { position: absolute; cursor: move; user-select: none; }
+        .canvas-el.active { outline: 2px dashed #3b82f6; }
+        .canvas-el img { width: 100%; height: 100%; pointer-events: none; }
+        
+        .properties { width: 300px; background: #1e293b; border-left: 1px solid #334155; padding: 20px; display: flex; flex-direction: column; overflow-y: auto;}
+        .prop-title { font-weight: bold; font-size: 14px; color: #cbd5e1; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;}
+        .prop-group { margin-bottom: 15px; }
+        .prop-group label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
+        .prop-group input, .prop-group select { width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; border-radius: 4px; box-sizing: border-box;}
+        
+        .top-bar { position: absolute; top: 0; left: 80px; right: 0; height: 50px; background: rgba(30, 41, 59, 0.9); z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 20px;}
+        .btn-save { background: #10b981; color: white; border: none; padding: 6px 15px; border-radius: 4px; font-weight: bold; cursor: pointer;}
+        .btn-exit { background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 5px 15px; border-radius: 4px; cursor: pointer; text-decoration: none;}
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <button class="tool-btn" onclick="addText()" title="Texte"><i class="fa fa-font"></i></button>
+        <button class="tool-btn" onclick="addImage()" title="Image"><i class="fa fa-image"></i></button>
+        <button class="tool-btn" onclick="addClock()" title="Horloge"><i class="fa fa-clock"></i></button>
+    </div>
+
+    <div class="workspace">
+        <div class="top-bar">
+            <div><strong style="color:#cbd5e1;">Studio:</strong> {{ layout.name }}</div>
+            <div>
+                <a href="/layouts" class="btn-exit me-2">Quitter</a>
+                <button class="btn-save" onclick="saveLayout()">Enregistrer</button>
+            </div>
+        </div>
+        
+        <div id="canvas" onclick="deselectAll(event)">
+            <!-- Les elements generes en JS viendront ici -->
+        </div>
+    </div>
+
+    <div class="properties" id="propsPanel">
+        <div class="prop-title">Fond d'écran</div>
+        <div class="prop-group">
+            <label>Couleur du fond</label>
+            <input type="color" id="bgColor" value="{{ layout.bg_color }}" onchange="changeBg(this.value)">
+        </div>
+        
+        <div id="elProps" style="display:none; margin-top:20px; border-top:1px solid #334155; padding-top:20px;">
+            <div class="prop-title">Élément sélectionné</div>
+            <div class="prop-group">
+                <label>Largeur (px)</label><input type="number" id="elW" onchange="updateEl('w', this.value)">
+            </div>
+            <div class="prop-group">
+                <label>Hauteur (px)</label><input type="number" id="elH" onchange="updateEl('h', this.value)">
+            </div>
+            
+            <div id="textProps" style="display:none;">
+                <div class="prop-group"><label>Texte</label><input type="text" id="elText" oninput="updateEl('text', this.value)"></div>
+                <div class="prop-group"><label>Couleur</label><input type="color" id="elColor" onchange="updateEl('color', this.value)"></div>
+                <div class="prop-group"><label>Taille (px)</label><input type="number" id="elSize" onchange="updateEl('size', this.value)"></div>
+            </div>
+            
+            <div id="imgProps" style="display:none;">
+                <div class="prop-group">
+                    <label>Choisir l'Image</label>
+                    <select id="elImgUrl" onchange="updateEl('url', this.value)">
+                        <option value="">Sélectionnez...</option>
+                        {% for img in images %}
+                        <option value="/uploads/{{ img.content }}">{{ img.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="deleteEl()" style="background:#ef4444; color:white; border:none; width:100%; padding:8px; border-radius:4px; cursor:pointer; margin-top:10px;">Supprimer</button>
+        </div>
+    </div>
+
+    <script>
+        // LECTURE DE LA BASE DE DONNEES (Injectee par le serveur)
+        let elements = {{ layout.elements_json|safe }};
+        let canvas = document.getElementById('canvas');
+        let activeId = null;
+        let isDragging = false;
+        let dragOffsetX, dragOffsetY;
+
+        function renderCanvas() {
+            canvas.innerHTML = '';
+            elements.forEach(el => {
+                let div = document.createElement('div');
+                div.className = 'canvas-el' + (el.id === activeId ? ' active' : '');
+                div.id = el.id;
+                div.style.left = el.x + 'px';
+                div.style.top = el.y + 'px';
+                div.style.width = el.w + 'px';
+                div.style.height = el.h + 'px';
+                div.style.zIndex = el.z || 10;
+                
+                if(el.type === 'text') {
+                    div.style.color = el.color;
+                    div.style.fontSize = el.size + 'px';
+                    div.style.fontFamily = 'sans-serif';
+                    div.innerText = el.text;
+                } else if(el.type === 'image') {
+                    if(el.url) div.innerHTML = `<img src="${el.url}">`;
+                    else div.innerHTML = `<div style="background:#334155;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#94a3b8;">Image</div>`;
+                } else if(el.type === 'clock') {
+                    div.style.color = 'white';
+                    div.style.fontSize = '30px';
+                    div.style.background = 'rgba(0,0,0,0.5)';
+                    div.style.display = 'flex';
+                    div.style.alignItems = 'center';
+                    div.style.justifyContent = 'center';
+                    div.innerText = "14:35:00"; // Fake clock pour l'editeur
+                }
+                
+                div.onmousedown = (e) => startDrag(e, el.id);
+                canvas.appendChild(div);
+            });
+            updatePropsPanel();
+        }
+
+        // DRAG AND DROP NATIF
+        function startDrag(e, id) {
+            e.stopPropagation();
+            activeId = id;
+            isDragging = true;
+            let el = elements.find(x => x.id === id);
+            
+            // Calculer l'offset de la souris par rapport au coin en haut a gauche de la div
+            let rect = e.target.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            
+            renderCanvas();
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if(!isDragging || !activeId) return;
+            let canvasRect = canvas.getBoundingClientRect();
+            let el = elements.find(x => x.id === activeId);
+            
+            // On positionne le div en suivant la souris (en restant dans le canvas grossierement)
+            let newX = e.clientX - canvasRect.left - dragOffsetX;
+            let newY = e.clientY - canvasRect.top - dragOffsetY;
+            
+            el.x = newX; el.y = newY;
+            
+            let domEl = document.getElementById(activeId);
+            if(domEl) {
+                domEl.style.left = el.x + 'px';
+                domEl.style.top = el.y + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => { isDragging = false; });
+
+        function deselectAll(e) {
+            if(e.target === canvas) {
+                activeId = null;
+                renderCanvas();
+            }
+        }
+
+        // AJOUT D'ELEMENTS
+        function addText() {
+            elements.push({ id: 'el_'+Date.now(), type: 'text', x: 50, y: 50, w: 300, h: 50, text: 'Titre Personnalisé', color: '#ffffff', size: 40, z: 10 });
+            renderCanvas();
+        }
+        function addImage() {
+            elements.push({ id: 'el_'+Date.now(), type: 'image', x: 100, y: 100, w: 400, h: 300, url: '', z: 5 });
+            renderCanvas();
+        }
+        function addClock() {
+            elements.push({ id: 'el_'+Date.now(), type: 'clock', x: 700, y: 30, w: 200, h: 60, z: 20 });
+            renderCanvas();
+        }
+
+        function deleteEl() {
+            elements = elements.filter(x => x.id !== activeId);
+            activeId = null;
+            renderCanvas();
+        }
+
+        function changeBg(color) {
+            canvas.style.backgroundColor = color;
+        }
+
+        // PANNEAU PROPRIETES
+        function updatePropsPanel() {
+            let panel = document.getElementById('elProps');
+            if(!activeId) { panel.style.display = 'none'; return; }
+            
+            let el = elements.find(x => x.id === activeId);
+            panel.style.display = 'block';
+            document.getElementById('elW').value = el.w;
+            document.getElementById('elH').value = el.h;
+            
+            document.getElementById('textProps').style.display = el.type === 'text' ? 'block' : 'none';
+            document.getElementById('imgProps').style.display = el.type === 'image' ? 'block' : 'none';
+            
+            if(el.type === 'text') {
+                document.getElementById('elText').value = el.text;
+                document.getElementById('elColor').value = el.color;
+                document.getElementById('elSize').value = el.size;
+            } else if(el.type === 'image') {
+                document.getElementById('elImgUrl').value = el.url;
+            }
+        }
+
+        function updateEl(prop, val) {
+            if(!activeId) return;
+            let el = elements.find(x => x.id === activeId);
+            if(prop === 'w' || prop === 'h' || prop === 'size') val = parseInt(val) || 100;
+            el[prop] = val;
+            renderCanvas();
+        }
+
+        // SAUVEGARDE AU CMS
+        function saveLayout() {
+            let data = {
+                bg_color: document.getElementById('bgColor').value,
+                elements: elements
+            };
+            fetch('/save_layout/{{ layout.id }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(() => alert('Design sauvegardé avec succès !'));
+        }
+
+        // Lancement au demarrage
+        renderCanvas();
+    </script>
+</body>
+</html>

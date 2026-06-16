@@ -1,0 +1,73 @@
+{% extends "base_dashboard.html" %}
+{% block title %}Omni AI{% endblock %}
+{% block header_title %}<i class="fa fa-magic text-warning me-2"></i> Omni AI{% endblock %}
+{% block header_subtitle %}Votre assistant intelligent de création d'affichage dynamique.{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container { display: flex; flex-direction: column; height: 60vh; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+    .chat-history { flex-grow: 1; padding: 20px; overflow-y: auto; background: #f8fafc; }
+    .message { max-width: 80%; margin-bottom: 20px; padding: 15px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+    .msg-user { background: #3b82f6; color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 0; }
+    .msg-ai { background: #e2e8f0; color: #0f172a; align-self: flex-start; margin-right: auto; border-bottom-left-radius: 0; }
+    .chat-input-area { display: flex; padding: 15px; background: #ffffff; border-top: 1px solid #e2e8f0; }
+    .chat-input { flex-grow: 1; border: 1px solid #cbd5e1; border-radius: 20px; padding: 10px 20px; outline: none; }
+    .chat-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+    .btn-send { background: #3b82f6; color: white; border: none; width: 45px; height: 45px; border-radius: 50%; margin-left: 10px; cursor: pointer; transition: 0.2s; }
+    .btn-send:hover { background: #2563eb; }
+    .typing-indicator { color: #64748b; font-style: italic; font-size: 12px; margin-bottom: 10px; display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="chat-container">
+            <div class="chat-history" id="chatHistory">
+                <div class="message msg-ai">
+                    👋 Bonjour {{ user.username }} ! Je suis <strong>Omni AI</strong>.<br><br>
+                    Décrivez-moi l'affichage que vous souhaitez générer. Par exemple :<br>
+                    <i>"Crée un affichage du taux de change EUR/USD actualisé toutes les 5 min"</i> ou <i>"Affiche le prix du Bitcoin en direct"</i>.
+                </div>
+            </div>
+            <div class="typing-indicator" id="typingIndicator" style="padding-left: 20px;">Omni AI code votre widget... <i class="fa fa-spinner fa-spin"></i></div>
+            <form class="chat-input-area" id="aiForm">
+                <input type="text" class="chat-input" id="userInput" placeholder="Demandez à l'IA..." required autocomplete="off">
+                <button type="submit" class="btn-send"><i class="fa fa-paper-plane"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('aiForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        let inputField = document.getElementById('userInput');
+        let text = inputField.value;
+        if(!text.trim()) return;
+        
+        let history = document.getElementById('chatHistory');
+        
+        // Ajouter message User
+        history.innerHTML += `<div class="message msg-user">${text}</div>`;
+        history.scrollTop = history.scrollHeight;
+        inputField.value = '';
+        
+        // Afficher "Typing..."
+        document.getElementById('typingIndicator').style.display = 'block';
+        
+        // Envoyer requete a l'API IA du serveur
+        fetch('/api/omni_ai/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: text })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('typingIndicator').style.display = 'none';
+            history.innerHTML += `<div class="message msg-ai">${data.response}</div>`;
+            history.scrollTop = history.scrollHeight;
+        });
+    });
+</script>
+{% endblock %}

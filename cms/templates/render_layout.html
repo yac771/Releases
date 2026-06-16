@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; background-color: {{ layout.bg_color }}; overflow: hidden; font-family: sans-serif; }
+        #screen { 
+            position: absolute; 
+            top: 0; left: 0; 
+            /* On etire notre Canvas "960x540" (16:9) sur le plein ecran de la tele (100vw/100vh) */
+            width: 100vw; 
+            height: 100vh;
+        }
+        .element { position: absolute; }
+        .element img { width: 100%; height: 100%; object-fit: fill; }
+        .clock { background: rgba(0,0,0,0.5); color: white; display: flex; align-items: center; justify-content: center; font-size: 3vw; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="screen">
+        {% for el in elements %}
+            
+            {% set vw_x = (el.x / 960) * 100 %}
+            {% set vw_y = (el.y / 540) * 100 %}
+            {% set vw_w = (el.w / 960) * 100 %}
+            {% set vw_h = (el.h / 540) * 100 %}
+            
+            <div class="element {% if el.type == 'clock' %}clock{% endif %}" 
+                 style="left: {{ vw_x }}vw; top: {{ vw_y }}vh; width: {{ vw_w }}vw; height: {{ vw_h }}vh; z-index: {{ el.z }}; 
+                        {% if el.type == 'text' %}color: {{ el.color }}; font-size: {{ (el.size / 540) * 100 }}vh;{% endif %}"
+                 {% if el.type == 'clock' %}id="clock_{{ loop.index }}"{% endif %}>
+                 
+                {% if el.type == 'text' %}
+                    {{ el.text }}
+                {% elif el.type == 'image' and el.url %}
+                    <!-- Transformation de l'URL pour la version reseau -->
+                    <img src="http://{{ local_ip }}:5000{{ el.url }}">
+                {% endif %}
+                
+            </div>
+        {% endfor %}
+    </div>
+
+    <script>
+        function updateClocks() {
+            let now = new Date();
+            let timeStr = now.toLocaleTimeString('fr-FR');
+            let clocks = document.querySelectorAll('.clock');
+            clocks.forEach(c => c.innerText = timeStr);
+        }
+        setInterval(updateClocks, 1000);
+        updateClocks();
+    </script>
+</body>
+</html>

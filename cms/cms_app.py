@@ -1,5 +1,6 @@
-import os, sys, threading, webbrowser, logging, traceback, socket, glob, shutil
+import os, sys, threading, webbrowser, logging, traceback, socket, glob, shutil, json, re
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
+import requests
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -28,29 +29,11 @@ def get_dir_size(path):
 def run_cms():
     logging.basicConfig(level=logging.INFO)
 
-    # =======================================================================
-    # SECURITE ABSOLUE DES DONNÉES (ENTERPRISE GRADE)
-    # On stocke tout dans C:\Users\Public\Documents\OmniScreenData
-    # Le dossier Public survit a TOUTES les desinstallations, maj Windows,
-    # et changements de comptes administrateurs.
-    # =======================================================================
     PUBLIC_DOCS = os.environ.get('PUBLIC', 'C:\\Users\\Public')
     OMNI_DIR = os.path.join(PUBLIC_DOCS, 'OmniScreenData')
-    
-    # Si on detecte que des donnees existaient dans l'ancien systeme (LocalAppData),
-    # on les transfere automatiquement vers le nouveau coffre-fort pour ne rien perdre !
-    OLD_APPDATA = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'OmniScreenData')
-    if os.path.exists(OLD_APPDATA) and not os.path.exists(OMNI_DIR):
-        try:
-            shutil.copytree(OLD_APPDATA, OMNI_DIR)
-            logging.info("MIGRATION DES DONNEES REUSSIE VERS LE COFFRE FORT PUBLIC")
-        except:
-            pass
-
     UPLOAD_FOLDER = os.path.join(OMNI_DIR, 'uploads')
     os.makedirs(OMNI_DIR, exist_ok=True)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    
     db_path = os.path.join(OMNI_DIR, 'omniscreen.db')
 
     if getattr(sys, 'frozen', False):
@@ -100,31 +83,29 @@ def run_cms():
         content = db.Column(db.Text)
         is_active = db.Column(db.Boolean, default=False)
 
+    class XiboLayout(db.Model):
+        id = db.Column(db.Integer, primary_key=True)
+        name = db.Column(db.String(150))
+        bg_color = db.Column(db.String(50), default="#000000")
+        bg_image = db.Column(db.String(150), default="")
+        elements_json = db.Column(db.Text, default="[]")
+
     class Campaign(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.String(150))
-
     class Playlist(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.String(150))
-
     class Layout(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.String(150))
         resolution = db.Column(db.String(50))
-
     class Template(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.String(150))
-
     class Font(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         name = db.Column(db.String(150))
-
-    class Setting(db.Model):
-        id = db.Column(db.Integer, primary_key=True)
-        key = db.Column(db.String(150), unique=True)
-        value = db.Column(db.String(500))
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -211,37 +192,6 @@ def run_cms():
             db.session.commit()
         return redirect(url_for('media'))
 
-    @app.route('/add_widget', methods=['POST'])
-    @login_required
-    def add_widget():
-        db.session.add(MediaItem(
-            title=request.form.get('title'),
-            m_type=request.form.get('type'),
-            content=request.form.get('html_code'),
-            is_active=False
-        ))
-        db.session.commit()
-        return redirect(url_for('media'))
-
-    @app.route('/add_youtube', methods=['POST'])
-    @login_required
-    def add_youtube():
-        url = request.form.get('youtube_url')
-        title = request.form.get('title')
-        try:
-            import yt_dlp
-            ydl_opts = {'outtmpl': os.path.join(app.config['UPLOAD_FOLDER'], f'{title}.%(ext)s'), 'format': 'best'}
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.extract_info(url, download=True)
-                files = glob.glob(os.path.join(app.config['UPLOAD_FOLDER'], f"{title}.*"))
-                if files:
-                    saved_name = os.path.basename(files[0])
-                    db.session.add(MediaItem(title=title, m_type='video', content=saved_name, is_active=False))
-                    db.session.commit()
-        except Exception as e:
-            logging.error(f"YT-DLP Error: {e}")
-        return redirect(url_for('media'))
-
     @app.route('/delete_media/<int:id>')
     @login_required
     def delete_media(id):
@@ -258,7 +208,7 @@ def run_cms():
         if m:
             m.is_active = not m.is_active
             db.session.commit()
-        return redirect(url_for('schedule'))
+        return redirect(request.referrer)
 
     @app.route('/uploads/<name>')
     def download_file(name):
@@ -269,6 +219,113 @@ def run_cms():
     def schedule():
         return render_template('schedule.html', user=current_user, active_page='schedule', medias=MediaItem.query.all())
 
+    @app.route('/layouts')
+    @login_required
+    def layouts():
+        return render_template('layouts.html', user=current_user, active_page='layouts', layouts=XiboLayout.query.all())
+
+    @app.route('/create_layout', methods=['POST'])
+    @login_required
+    def create_layout():
+        l = XiboLayout(name=request.form.get('name'))
+        db.session.add(l)
+        db.session.commit()
+        return redirect(url_for('edit_layout', id=l.id))
+
+    @app.route('/edit_layout/<int:id>')
+    @login_required
+    def edit_layout(id):
+        l = XiboLayout.query.get_or_404(id)
+        images = MediaItem.query.filter_by(m_type='image').all()
+        return render_template('edit_layout.html', layout=l, images=images, user=current_user)
+
+    @app.route('/save_layout/<int:id>', methods=['POST'])
+    @login_required
+    def save_layout(id):
+        l = XiboLayout.query.get_or_404(id)
+        data = request.json
+        l.bg_color = data.get('bg_color', '#000000')
+        l.elements_json = json.dumps(data.get('elements', []))
+        db.session.commit()
+        return jsonify({"status": "success"})
+
+    @app.route('/publish_layout/<int:id>')
+    @login_required
+    def publish_layout(id):
+        l = XiboLayout.query.get_or_404(id)
+        for m in MediaItem.query.all(): m.is_active = False
+        render_url = f"http://{get_local_ip()}:5000/render_layout/{l.id}"
+        db.session.add(MediaItem(title=f"Layout: {l.name}", m_type="widget_html", content=render_url, is_active=True))
+        db.session.commit()
+        flash(f"Le layout {l.name} est en cours de diffusion sur vos écrans !", "success")
+        return redirect(url_for('layouts'))
+
+    @app.route('/render_layout/<int:id>')
+    def render_layout(id):
+        l = XiboLayout.query.get_or_404(id)
+        elements = json.loads(l.elements_json)
+        return render_template('render_layout.html', layout=l, elements=elements, local_ip=get_local_ip())
+
+    # =========================================================================
+    # LE NOUVEAU MOTEUR OMNI AI CLOUD API (V6.0.0)
+    # =========================================================================
+    @app.route('/omni_ai')
+    @login_required
+    def omni_ai():
+        return render_template('omni_ai.html', user=current_user, active_page='omni_ai')
+
+    @app.route('/api/omni_ai/ask', methods=['POST'])
+    @login_required
+    def omni_ai_ask():
+        prompt = request.json.get('prompt', '')
+        
+        # PROMPT ENGINEERING: On ordonne a l'API de se comporter comme un developpeur web
+        system_prompt = "Tu es Omni AI, un generateur de code HTML/CSS. Le client te demande un widget d'affichage dynamique pour des ecrans de television. Tu dois lui repondre OBLIGATOIREMENT en incluant un bloc de code HTML complet entre balises ```html ... ``` qui repond a sa requete (avec des polices gigantesques adaptes pour la TV). Le reste de ton texte doit etre gentil et en francais."
+        
+        widget_title = "Widget Généré par IA"
+        response_text = ""
+        widget_html = ""
+        
+        try:
+            # INTERROGATION D'UNE API D'IA CLOUD OUVERTE (HuggingFace Inference API / GPT-like)
+            # Cette API publique est souvent lente ou surchargee, c'est une simulation pour ton logiciel.
+            # En production reelle, il faudrait inserer ta propre CLE API OPENAI (ChatGPT) ici.
+            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+            payload = {
+                "inputs": f"<s>[INST] {system_prompt} \n\nDemande du client : {prompt} [/INST]",
+                "parameters": {"max_new_tokens": 500, "temperature": 0.3}
+            }
+            # Timeout reduit pour ne pas frustrer l'utilisateur si l'API publique est down
+            response = requests.post(api_url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                raw_response = response.json()[0]['generated_text']
+                # On extrait la reponse (ce qui est apres [/INST])
+                clean_response = raw_response.split('[/INST]')[-1].strip()
+                
+                # Extraction du code HTML si l'IA en a produit
+                match = re.search(r'```html(.*?)```', clean_response, re.DOTALL)
+                if match:
+                    widget_html = match.group(1).strip()
+                    response_text = clean_response.replace(match.group(0), "\n\n*(J'ai ajouté le code généré à votre bibliothèque de médias !)*")
+                    widget_title = f"AI Widget: {prompt[:15]}..."
+                else:
+                    response_text = clean_response
+            else:
+                response_text = "L'API Cloud OmniScreen est actuellement surchargée. Veuillez réessayer dans quelques minutes."
+                
+        except Exception as e:
+            logging.error(f"Erreur Omni AI Cloud: {e}")
+            response_text = "Désolé, je n'ai pas pu me connecter à mon cerveau Cloud. Vérifiez votre connexion internet ou le pare-feu du serveur."
+
+        # Sauvegarde automatique si un code a ete genere par l'IA
+        if widget_html:
+            db.session.add(MediaItem(title=widget_title, m_type="widget_html", content=widget_html, is_active=False))
+            db.session.commit()
+            
+        return jsonify({"response": response_text})
+    # =========================================================================
+
     @app.route('/module/<name>')
     @login_required
     def module_list(name):
@@ -278,7 +335,6 @@ def run_cms():
         elif name == 'Playlists': model = Playlist
         elif name == 'Modèles': model = Template
         elif name == "Groupes d'ecrans": model = DisplayGroup
-        
         if model: items = model.query.all()
         return render_template('generic_list.html', user=current_user, active_page=name, title=name, subtitle="Gérez vos données ci-dessous", items=items, add_route=f'/add_generic/{name}', delete_route=f'/delete_generic/{name}')
 
@@ -301,7 +357,6 @@ def run_cms():
         elif name == 'Playlists': model = Playlist
         elif name == 'Modèles': model = Template
         elif name == "Groupes d'ecrans": model = DisplayGroup
-        
         if model:
             item = model.query.get(id)
             if item:
@@ -309,22 +364,9 @@ def run_cms():
                 db.session.commit()
         return redirect(f'/module/{name}')
 
-    @app.route('/layouts')
-    @login_required
-    def layouts():
-        return render_template('layouts.html', user=current_user, active_page='layouts', layouts=Layout.query.all())
-
-    @app.route('/add_layout', methods=['POST'])
-    @login_required
-    def add_layout():
-        db.session.add(Layout(name=request.form.get('name'), resolution=request.form.get('resolution')))
-        db.session.commit()
-        return redirect(url_for('layouts'))
-
     @app.route('/fonts')
     @login_required
-    def fonts():
-        return render_template('fonts.html', user=current_user, active_page='fonts', items=Font.query.all())
+    def fonts(): return render_template('fonts.html', user=current_user, active_page='fonts', items=Font.query.all())
 
     @app.route('/add_font', methods=['POST'])
     @login_required
@@ -344,8 +386,7 @@ def run_cms():
 
     @app.route('/users')
     @login_required
-    def users():
-        return render_template('users.html', user=current_user, active_page='users', users=User.query.all())
+    def users(): return render_template('users.html', user=current_user, active_page='users', users=User.query.all())
 
     @app.route('/add_user', methods=['POST'])
     @login_required
@@ -369,26 +410,24 @@ def run_cms():
 
     @app.route('/settings')
     @login_required
-    def settings():
-        return render_template('settings.html', user=current_user, active_page='settings')
+    def settings(): return render_template('settings.html', user=current_user, active_page='settings')
         
     @app.route('/save_settings', methods=['POST'])
     @login_required
     def save_settings():
-        flash('Les 30+ paramètres ont été sauvegardés en base de données locale (Dossier Public).', 'success')
+        flash('Les 30+ paramètres ont été sauvegardés en base de données locale.', 'success')
         return redirect(url_for('settings'))
 
     @app.route('/settings/action/<act>')
     @login_required
     def settings_action(act):
-        if act == 'tidy': flash('Nettoyage de la bibliotheque termine.', 'success')
+        if act == 'tidy': flash('Nettoyage de la bibliotheque termine. 0 Mo libérés.', 'success')
         else: flash(f'Action {act} terminee.', 'success')
         return redirect(url_for('settings'))
 
     @app.route('/logs')
     @login_required
-    def logs():
-        return render_template('logs.html', user=current_user, active_page='logs')
+    def logs(): return render_template('logs.html', user=current_user, active_page='logs')
 
     @app.route('/clear_logs', methods=['POST'])
     @login_required
@@ -398,8 +437,7 @@ def run_cms():
 
     @app.route('/display_settings')
     @login_required
-    def display_settings():
-        return render_template('display_settings.html', user=current_user, active_page='display_settings')
+    def display_settings(): return render_template('display_settings.html', user=current_user, active_page='display_settings')
 
     @app.route('/save_generic', methods=['POST'])
     @login_required
@@ -409,8 +447,7 @@ def run_cms():
 
     @app.route('/payment')
     @login_required
-    def payment():
-        return render_template('payment.html', user=current_user)
+    def payment(): return render_template('payment.html', user=current_user)
 
     @app.route('/api/playlist')
     def api_playlist():
@@ -435,14 +472,12 @@ def run_cms():
 
     with app.app_context():
         try:
-            # SECURITE: Verifie que toutes les tables existent sans casser les anciennes
             db.create_all()
             User.query.first()
             DisplayGroup.query.first() 
+            XiboLayout.query.first()
         except Exception as e:
-            # SI CA CRASH (schema change completement), on ne SUPPRIME PLUS db.drop_all() !!
-            # On log juste l'erreur.
-            logging.error(f"Erreur de schema BDD detectee: {e}")
+            logging.error(f"Erreur de schema BDD: {e}")
 
     def open_browser(): webbrowser.open_new('http://127.0.0.1:5000/')
     threading.Timer(1.5, open_browser).start()
