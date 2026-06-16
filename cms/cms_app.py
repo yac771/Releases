@@ -298,7 +298,7 @@ def run_cms():
         return render_template('render_layout.html', layout=l, elements=elements, local_ip=get_local_ip())
 
     # =========================================================================
-    # LE MOTEUR OMNI AI (VERSION 7.0 - RAPIDE & SANS CRASH)
+    # LE MOTEUR OMNI AI UNIVERSEL (CHATGPT LIKE)
     # =========================================================================
     @app.route('/omni_ai')
     @login_required
@@ -310,51 +310,61 @@ def run_cms():
     def omni_ai_ask():
         prompt = request.json.get('prompt', '')
         
+        # Le SYSTEM PROMPT indique maintenant à l'IA d'agir comme un veritable
+        # ChatGPT ouvert sur le monde, tout en conservant sa capacite a faire
+        # du code si on lui demande.
         system_prompt = (
-            "Tu es Omni AI. Agis comme un developpeur web expert. "
-            "Le client te demande un widget dynamique pour des ecrans de television. "
-            "Reponds-lui brievement puis donne OBLIGATOIREMENT un code HTML/CSS/JS complet dans un bloc ```html ... ```. "
-            "Fais un fond tres sombre, et ecris avec une police geante et elegante. Ton code doit fonctionner tout de suite."
+            "Tu es Omni AI, l'assistant virtuel intelligent du logiciel OmniScreen. "
+            "Tu dois repondre a TOUTES les questions de l'utilisateur (culture generale, "
+            "mathematiques, discussions, conseils, etc.) de maniere tres chaleureuse et en francais. "
+            "Cependant, si l'utilisateur te demande precisement de 'creer', 'coder' ou 'faire un widget' "
+            "(comme la meteo, la bourse ou du texte defilant), alors ET SEULEMENT ALORS, tu dois "
+            "inclure un bloc ```html contenant du code HTML/CSS parfait pour la television. "
+            "Pour les questions normales, reponds juste en tant qu'assistant IA naturel, comme ChatGPT."
         )
         
         try:
-            # On utilise le modele LLM gratuit le plus rapide du moment : Pollinations
+            # L'API de Llama-3 par DeepInfra (Gratuit, hyper puissant, comportement ChatGPT parfait)
+            api_url = "https://api.deepinfra.com/v1/openai/chat/completions"
             payload = {
+                "model": "meta-llama/Meta-Llama-3-70B-Instruct",
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
-                ]
+                ],
+                "temperature": 0.7
             }
             
-            # Requete POST avec timeout large pour que l'IA ait le temps de taper son code
-            response = requests.post(
-                "https://text.pollinations.ai/",
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=25 
-            )
+            resp = requests.post(api_url, json=payload, timeout=20, verify=False)
             
-            if response.status_code == 200:
-                raw_text = response.text
+            if resp.status_code == 200:
+                raw_text = resp.json()['choices'][0]['message']['content']
                 
-                # Extraction du HTML
-                match = re.search(r'```html(.*?)```', raw_text, re.DOTALL | re.IGNORECASE)
+                # On verifie si l'IA a mis du code HTML dans sa reponse
+                match = re.search(r'```(?:html)?\n(.*?)```', raw_text, re.DOTALL | re.IGNORECASE)
+                
                 if match:
+                    # S'il y a du code, on l'isole, on l'ajoute a la BDD, et on renvoie le message
                     widget_html = match.group(1).strip()
                     response_text = raw_text.replace(match.group(0), "").replace("```", "").strip()
-                    response_text += "\n\n✅ J'ai généré votre code et je l'ai ajouté à votre Bibliothèque de Médias !"
+                    response_text += "\n\n✅ J'ai détecté une demande de création ! Le code HTML de votre Widget a été généré et ajouté dans la Bibliothèque de Médias."
                     db.session.add(MediaItem(title=f"AI: {prompt[:15]}...", m_type="widget_html", content=widget_html, is_active=False))
                     db.session.commit()
                 else:
+                    # S'il n'y a pas de code, c'est juste une question de chat normale, on affiche la reponse de l'IA telle quelle !
                     response_text = raw_text
-            else:
-                response_text = f"Mon serveur neuronal a eu un raté (Erreur {response.status_code}). Veuillez reformuler votre demande."
+                    
+                # Formatage Markdown basique pour un bel affichage sur le front-end
+                response_text = response_text.replace('\n', '<br>')
                 
-        except Exception as e:
-            logging.error(f"Erreur IA (Timeout ou Reseau): {e}")
-            response_text = "Désolé, je n'ai pas pu joindre le serveur d'Intelligence Artificielle en moins de 25 secondes. Veuillez vérifier votre connexion internet."
+                return jsonify({"response": response_text})
+                
+            else:
+                return jsonify({"response": "Je n'arrive pas à réfléchir correctement en ce moment. Les serveurs LLaMA sont saturés !"})
 
-        return jsonify({"response": response_text})
+        except Exception as e:
+            logging.error(f"Erreur Vraie IA: {e}")
+            return jsonify({"response": "Mon accès à Internet ou aux serveurs Cloud est bloqué par votre ordinateur. Posez-moi une autre question !"})
 
     # =========================================================================
 
