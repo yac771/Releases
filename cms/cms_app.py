@@ -192,6 +192,37 @@ def run_cms():
             db.session.commit()
         return redirect(url_for('media'))
 
+    @app.route('/add_widget', methods=['POST'])
+    @login_required
+    def add_widget():
+        db.session.add(MediaItem(
+            title=request.form.get('title'),
+            m_type=request.form.get('type'),
+            content=request.form.get('html_code'),
+            is_active=False
+        ))
+        db.session.commit()
+        return redirect(url_for('media'))
+
+    @app.route('/add_youtube', methods=['POST'])
+    @login_required
+    def add_youtube():
+        url = request.form.get('youtube_url')
+        title = request.form.get('title')
+        try:
+            import yt_dlp
+            ydl_opts = {'outtmpl': os.path.join(app.config['UPLOAD_FOLDER'], f'{title}.%(ext)s'), 'format': 'best'}
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.extract_info(url, download=True)
+                files = glob.glob(os.path.join(app.config['UPLOAD_FOLDER'], f"{title}.*"))
+                if files:
+                    saved_name = os.path.basename(files[0])
+                    db.session.add(MediaItem(title=title, m_type='video', content=saved_name, is_active=False))
+                    db.session.commit()
+        except Exception as e:
+            logging.error(f"YT-DLP Error: {e}")
+        return redirect(url_for('media'))
+
     @app.route('/delete_media/<int:id>')
     @login_required
     def delete_media(id):
@@ -267,7 +298,7 @@ def run_cms():
         return render_template('render_layout.html', layout=l, elements=elements, local_ip=get_local_ip())
 
     # =========================================================================
-    # LE NOUVEAU MOTEUR OMNI AI CLOUD API (V6.0.0)
+    # LE MOTEUR OMNI AI (VERSION 7.0 - RAPIDE & SANS CRASH)
     # =========================================================================
     @app.route('/omni_ai')
     @login_required
@@ -279,51 +310,52 @@ def run_cms():
     def omni_ai_ask():
         prompt = request.json.get('prompt', '')
         
-        # PROMPT ENGINEERING: On ordonne a l'API de se comporter comme un developpeur web
-        system_prompt = "Tu es Omni AI, un generateur de code HTML/CSS. Le client te demande un widget d'affichage dynamique pour des ecrans de television. Tu dois lui repondre OBLIGATOIREMENT en incluant un bloc de code HTML complet entre balises ```html ... ``` qui repond a sa requete (avec des polices gigantesques adaptes pour la TV). Le reste de ton texte doit etre gentil et en francais."
-        
-        widget_title = "Widget Généré par IA"
-        response_text = ""
-        widget_html = ""
+        system_prompt = (
+            "Tu es Omni AI. Agis comme un developpeur web expert. "
+            "Le client te demande un widget dynamique pour des ecrans de television. "
+            "Reponds-lui brievement puis donne OBLIGATOIREMENT un code HTML/CSS/JS complet dans un bloc ```html ... ```. "
+            "Fais un fond tres sombre, et ecris avec une police geante et elegante. Ton code doit fonctionner tout de suite."
+        )
         
         try:
-            # INTERROGATION D'UNE API D'IA CLOUD OUVERTE (HuggingFace Inference API / GPT-like)
-            # Cette API publique est souvent lente ou surchargee, c'est une simulation pour ton logiciel.
-            # En production reelle, il faudrait inserer ta propre CLE API OPENAI (ChatGPT) ici.
-            api_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+            # On utilise le modele LLM gratuit le plus rapide du moment : Pollinations
             payload = {
-                "inputs": f"<s>[INST] {system_prompt} \n\nDemande du client : {prompt} [/INST]",
-                "parameters": {"max_new_tokens": 500, "temperature": 0.3}
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ]
             }
-            # Timeout reduit pour ne pas frustrer l'utilisateur si l'API publique est down
-            response = requests.post(api_url, json=payload, timeout=10)
+            
+            # Requete POST avec timeout large pour que l'IA ait le temps de taper son code
+            response = requests.post(
+                "https://text.pollinations.ai/",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=25 
+            )
             
             if response.status_code == 200:
-                raw_response = response.json()[0]['generated_text']
-                # On extrait la reponse (ce qui est apres [/INST])
-                clean_response = raw_response.split('[/INST]')[-1].strip()
+                raw_text = response.text
                 
-                # Extraction du code HTML si l'IA en a produit
-                match = re.search(r'```html(.*?)```', clean_response, re.DOTALL)
+                # Extraction du HTML
+                match = re.search(r'```html(.*?)```', raw_text, re.DOTALL | re.IGNORECASE)
                 if match:
                     widget_html = match.group(1).strip()
-                    response_text = clean_response.replace(match.group(0), "\n\n*(J'ai ajouté le code généré à votre bibliothèque de médias !)*")
-                    widget_title = f"AI Widget: {prompt[:15]}..."
+                    response_text = raw_text.replace(match.group(0), "").replace("```", "").strip()
+                    response_text += "\n\n✅ J'ai généré votre code et je l'ai ajouté à votre Bibliothèque de Médias !"
+                    db.session.add(MediaItem(title=f"AI: {prompt[:15]}...", m_type="widget_html", content=widget_html, is_active=False))
+                    db.session.commit()
                 else:
-                    response_text = clean_response
+                    response_text = raw_text
             else:
-                response_text = "L'API Cloud OmniScreen est actuellement surchargée. Veuillez réessayer dans quelques minutes."
+                response_text = f"Mon serveur neuronal a eu un raté (Erreur {response.status_code}). Veuillez reformuler votre demande."
                 
         except Exception as e:
-            logging.error(f"Erreur Omni AI Cloud: {e}")
-            response_text = "Désolé, je n'ai pas pu me connecter à mon cerveau Cloud. Vérifiez votre connexion internet ou le pare-feu du serveur."
+            logging.error(f"Erreur IA (Timeout ou Reseau): {e}")
+            response_text = "Désolé, je n'ai pas pu joindre le serveur d'Intelligence Artificielle en moins de 25 secondes. Veuillez vérifier votre connexion internet."
 
-        # Sauvegarde automatique si un code a ete genere par l'IA
-        if widget_html:
-            db.session.add(MediaItem(title=widget_title, m_type="widget_html", content=widget_html, is_active=False))
-            db.session.commit()
-            
         return jsonify({"response": response_text})
+
     # =========================================================================
 
     @app.route('/module/<name>')
